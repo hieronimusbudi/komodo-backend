@@ -2,6 +2,7 @@ package buyerusecase
 
 import (
 	"github.com/hieronimusbudi/komodo-backend/entity"
+	resterrors "github.com/hieronimusbudi/komodo-backend/framework/helpers/rest_errors"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -16,11 +17,11 @@ func NewBuyerUsecase(buyerRepo entity.BuyerRepository) entity.BuyerUseCase {
 	}
 }
 
-func (b *buyerUsecase) Register(buyer *entity.Buyer) error {
+func (b *buyerUsecase) Register(buyer *entity.Buyer) resterrors.RestErr {
 	// encrypt password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(buyer.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return err
+		return resterrors.NewInternalServerError(err.Error(), err)
 	}
 
 	buyer.Password = string(hashedPassword)
@@ -32,7 +33,7 @@ func (b *buyerUsecase) Register(buyer *entity.Buyer) error {
 	return nil
 }
 
-func (b *buyerUsecase) Login(buyer *entity.Buyer) (entity.Buyer, error) {
+func (b *buyerUsecase) Login(buyer *entity.Buyer) (entity.Buyer, resterrors.RestErr) {
 	oriPass := buyer.Password
 	repoRes, err := b.buyerRepo.GetByEmail(buyer)
 	if err != nil {
@@ -42,7 +43,7 @@ func (b *buyerUsecase) Login(buyer *entity.Buyer) (entity.Buyer, error) {
 	// compare password
 	cprErr := bcrypt.CompareHashAndPassword([]byte(repoRes.Password), []byte(oriPass))
 	if cprErr != nil {
-		return *buyer, cprErr
+		return *buyer, resterrors.NewInternalServerError(cprErr.Error(), cprErr)
 	}
 
 	return repoRes, nil

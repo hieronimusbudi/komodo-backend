@@ -3,10 +3,10 @@ package orderrepo
 import (
 	"context"
 	"database/sql"
-	"log"
-	"time"
 
 	"github.com/hieronimusbudi/komodo-backend/entity"
+	"github.com/hieronimusbudi/komodo-backend/framework/helpers"
+	resterrors "github.com/hieronimusbudi/komodo-backend/framework/helpers/rest_errors"
 	"github.com/shopspring/decimal"
 )
 
@@ -35,20 +35,21 @@ type mysqlOrderRepository struct {
 	Conn *sql.DB
 }
 
+// NewMysqlOrderRepository will create a object with entity.OrderRepository interface representation
 func NewMysqlOrderRepository(Conn *sql.DB) entity.OrderRepository {
 	return &mysqlOrderRepository{Conn: Conn}
 }
 
-func (m *mysqlOrderRepository) GetAll() ([]entity.Order, error) {
+func (m *mysqlOrderRepository) GetAll() ([]entity.Order, resterrors.RestErr) {
 	stmt, err := m.Conn.Prepare(queryGetAll)
 	if err != nil {
-		return nil, err
+		return nil, resterrors.NewInternalServerError("error when trying to get data", err)
 	}
 	defer stmt.Close()
 
 	dbRes, err := stmt.Query()
 	if err != nil {
-		return nil, err
+		return nil, resterrors.NewInternalServerError("error when trying to get data", err)
 	}
 
 	order := entity.Order{}
@@ -74,16 +75,16 @@ func (m *mysqlOrderRepository) GetAll() ([]entity.Order, error) {
 	return res, nil
 }
 
-func (m *mysqlOrderRepository) GetByBuyerID(buyerID int64) ([]entity.Order, error) {
+func (m *mysqlOrderRepository) GetByBuyerID(buyerID int64) ([]entity.Order, resterrors.RestErr) {
 	stmt, err := m.Conn.Prepare(queryGetByBuyerID)
 	if err != nil {
-		return nil, err
+		return nil, resterrors.NewInternalServerError("error when trying to get data", err)
 	}
 	defer stmt.Close()
 
 	dbRes, err := stmt.Query(buyerID)
 	if err != nil {
-		return nil, err
+		return nil, resterrors.NewInternalServerError("error when trying to get data", err)
 	}
 
 	orderRow := entity.Order{}
@@ -96,28 +97,25 @@ func (m *mysqlOrderRepository) GetByBuyerID(buyerID int64) ([]entity.Order, erro
 			&orderRow.ID, &orderRow.Buyer.ID, &orderRow.Seller.ID, &orderRow.DeliverySourceAddress,
 			&orderRow.DeliveryDestinationAddress, &orderRow.TotalQuantity, &totalPrice, &orderRow.Status, &orderDate)
 		if err != nil {
-			log.Println(err.Error())
-			return nil, err
+			return nil, resterrors.NewInternalServerError("error when trying to get data", err)
 		}
 
 		dP, err := decimal.NewFromString(string(totalPrice))
 		if err != nil {
-			log.Println(err.Error())
-			return nil, err
+			return nil, resterrors.NewInternalServerError("error when trying to get data", err)
 		}
 		orderRow.TotalPrice = dP
 
-		vT, err := time.Parse("2006-01-02 15:04:05", string(orderDate))
+		vT, err := helpers.GetTimeFromUint8(orderDate)
 		if err != nil {
-			log.Println(err.Error())
-			return nil, err
+			return nil, resterrors.NewInternalServerError("error when trying to get data", err)
 		}
 		orderRow.OrderDate = vT
 
 		// find order detail for each order
 		odRes, err := m.Conn.Query(odGetByOrderId, orderRow.ID)
 		if err != nil {
-			return nil, err
+			return nil, resterrors.NewInternalServerError("error when trying to get data", err)
 		}
 
 		// scan order details result
@@ -127,8 +125,7 @@ func (m *mysqlOrderRepository) GetByBuyerID(buyerID int64) ([]entity.Order, erro
 			// id, order_id, product_id, quantity
 			err = odRes.Scan(&odRow.ID, &odRow.Product.ID, &odRow.Quantity)
 			if err != nil {
-				log.Println(112, err.Error())
-				return nil, err
+				return nil, resterrors.NewInternalServerError("error when trying to get data", err)
 			}
 
 			orderRow.Items = append(orderRow.Items, odRow)
@@ -139,16 +136,16 @@ func (m *mysqlOrderRepository) GetByBuyerID(buyerID int64) ([]entity.Order, erro
 	return res, nil
 }
 
-func (m *mysqlOrderRepository) GetBySellerID(sellerID int64) ([]entity.Order, error) {
+func (m *mysqlOrderRepository) GetBySellerID(sellerID int64) ([]entity.Order, resterrors.RestErr) {
 	stmt, err := m.Conn.Prepare(queryGetBySellerID)
 	if err != nil {
-		return nil, err
+		return nil, resterrors.NewInternalServerError("error when trying to get data", err)
 	}
 	defer stmt.Close()
 
 	dbRes, err := stmt.Query(sellerID)
 	if err != nil {
-		return nil, err
+		return nil, resterrors.NewInternalServerError("error when trying to get data", err)
 	}
 
 	orderRow := entity.Order{}
@@ -161,28 +158,25 @@ func (m *mysqlOrderRepository) GetBySellerID(sellerID int64) ([]entity.Order, er
 			&orderRow.ID, &orderRow.Buyer.ID, &orderRow.Seller.ID, &orderRow.DeliverySourceAddress,
 			&orderRow.DeliveryDestinationAddress, &orderRow.TotalQuantity, &totalPrice, &orderRow.Status, &orderDate)
 		if err != nil {
-			log.Println(err.Error())
-			return nil, err
+			return nil, resterrors.NewInternalServerError("error when trying to get data", err)
 		}
 
 		dP, err := decimal.NewFromString(string(totalPrice))
 		if err != nil {
-			log.Println(err.Error())
-			return nil, err
+			return nil, resterrors.NewInternalServerError("error when trying to get data", err)
 		}
 		orderRow.TotalPrice = dP
 
-		vT, err := time.Parse("2006-01-02 15:04:05", string(orderDate))
+		vT, err := helpers.GetTimeFromUint8(orderDate)
 		if err != nil {
-			log.Println(err.Error())
-			return nil, err
+			return nil, resterrors.NewInternalServerError("error when trying to get data", err)
 		}
 		orderRow.OrderDate = vT
 
 		// find order detail for each order
 		odRes, err := m.Conn.Query(odGetByOrderId, orderRow.ID)
 		if err != nil {
-			return nil, err
+			return nil, resterrors.NewInternalServerError("error when trying to get data", err)
 		}
 
 		// scan order details result
@@ -192,8 +186,7 @@ func (m *mysqlOrderRepository) GetBySellerID(sellerID int64) ([]entity.Order, er
 			// id, order_id, product_id, quantity
 			err = odRes.Scan(&odRow.ID, &odRow.Product.ID, &odRow.Quantity)
 			if err != nil {
-				log.Println(112, err.Error())
-				return nil, err
+				return nil, resterrors.NewInternalServerError("error when trying to get data", err)
 			}
 
 			orderRow.Items = append(orderRow.Items, odRow)
@@ -204,42 +197,41 @@ func (m *mysqlOrderRepository) GetBySellerID(sellerID int64) ([]entity.Order, er
 	return res, nil
 }
 
-func (m *mysqlOrderRepository) GetByID(order *entity.Order) error {
+func (m *mysqlOrderRepository) GetByID(order *entity.Order) (entity.Order, resterrors.RestErr) {
 	stmt, err := m.Conn.Prepare(queryGetById)
 	if err != nil {
-		return err
+		return *order, resterrors.NewInternalServerError("error when trying to get data", err)
 	}
 	defer stmt.Close()
 
 	var totalPrice, orderDate []uint8
 	dbRes := stmt.QueryRow(order.ID)
-	if getErr := dbRes.Scan(&order.ID, &order.Buyer.ID, &order.Seller.ID, &order.DeliverySourceAddress,
-		&order.DeliveryDestinationAddress, &order.TotalQuantity, &totalPrice, &order.Status, &orderDate); getErr != nil {
-		return getErr
+	if err := dbRes.Scan(&order.ID, &order.Buyer.ID, &order.Seller.ID, &order.DeliverySourceAddress,
+		&order.DeliveryDestinationAddress, &order.TotalQuantity, &totalPrice, &order.Status, &orderDate); err != nil {
+		return *order, resterrors.NewInternalServerError("error when trying to get data", err)
 	}
 
 	dP, err := decimal.NewFromString(string(totalPrice))
 	if err != nil {
-		return err
+		return *order, resterrors.NewInternalServerError("error when trying to get data", err)
 	}
 	order.TotalPrice = dP
 
-	vT, err := time.Parse("2006-01-02 15:04:05", string(orderDate))
+	vT, err := helpers.GetTimeFromUint8(orderDate)
 	if err != nil {
-		return err
+		return *order, resterrors.NewInternalServerError("error when trying to get data", err)
 	}
 	order.OrderDate = vT
 
-	return nil
+	return *order, nil
 }
 
-func (m *mysqlOrderRepository) Store(order *entity.Order) error {
+func (m *mysqlOrderRepository) Store(order *entity.Order) resterrors.RestErr {
 	// start transaction sequence
 	ctx := context.Background()
 	tx, err := m.Conn.BeginTx(ctx, nil)
 	if err != nil {
-		log.Println(err)
-		return err
+		return resterrors.NewInternalServerError("error when trying to save data", err)
 	}
 
 	// insert order
@@ -248,16 +240,14 @@ func (m *mysqlOrderRepository) Store(order *entity.Order) error {
 		order.Buyer.ID, order.Seller.ID, order.DeliverySourceAddress, order.DeliveryDestinationAddress,
 		order.TotalQuantity, []uint8(order.TotalPrice.String()), order.Status, []uint8(order.OrderDate.Format("2006-01-02 15:04:05")))
 	if err != nil {
-		log.Println(1, err)
 		tx.Rollback()
-		return err
+		return resterrors.NewInternalServerError("error when trying to save data", err)
 	}
 
 	orderID, err := dbRes.LastInsertId()
 	if err != nil {
-		log.Println(2, err)
 		tx.Rollback()
-		return err
+		return resterrors.NewInternalServerError("error when trying to save data", err)
 	}
 	order.ID = orderID
 
@@ -268,13 +258,13 @@ func (m *mysqlOrderRepository) Store(order *entity.Order) error {
 			orderID, od.Product.ID, od.Quantity)
 		if err != nil {
 			tx.Rollback()
-			return err
+			return resterrors.NewInternalServerError("error when trying to save data", err)
 		}
 
 		odID, err := odRes.LastInsertId()
 		if err != nil {
 			tx.Rollback()
-			return err
+			return resterrors.NewInternalServerError("error when trying to save data", err)
 		}
 		order.Items[idx].ID = odID
 	}
@@ -282,15 +272,15 @@ func (m *mysqlOrderRepository) Store(order *entity.Order) error {
 	// commit the change if all queries ran successfully
 	err = tx.Commit()
 	if err != nil {
-		return err
+		return resterrors.NewInternalServerError("error when trying to save data", err)
 	}
 	return nil
 }
 
-func (m *mysqlOrderRepository) Update(order *entity.Order) error {
+func (m *mysqlOrderRepository) Update(order *entity.Order) resterrors.RestErr {
 	stmt, err := m.Conn.Prepare(queryUpdate)
 	if err != nil {
-		return err
+		return resterrors.NewInternalServerError("error when trying to update data", err)
 	}
 	defer stmt.Close()
 
@@ -298,20 +288,20 @@ func (m *mysqlOrderRepository) Update(order *entity.Order) error {
 	_, err = stmt.Exec(order.Buyer.ID, order.Seller.ID, order.DeliverySourceAddress,
 		order.DeliveryDestinationAddress, order.TotalQuantity, order.TotalPrice, order.Status, order.OrderDate, order.ID)
 	if err != nil {
-		return err
+		return resterrors.NewInternalServerError("error when trying to update data", err)
 	}
 	return nil
 }
 
-func (m *mysqlOrderRepository) Delete(order *entity.Order) error {
+func (m *mysqlOrderRepository) Delete(order *entity.Order) resterrors.RestErr {
 	stmt, err := m.Conn.Prepare(queryDelete)
 	if err != nil {
-		return err
+		return resterrors.NewInternalServerError("error when trying to delete data", err)
 	}
 	defer stmt.Close()
 
 	if _, err = stmt.Exec(order.ID); err != nil {
-		return err
+		return resterrors.NewInternalServerError("error when trying to delete data", err)
 	}
 	return nil
 }

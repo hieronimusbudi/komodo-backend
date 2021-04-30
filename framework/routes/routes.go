@@ -2,13 +2,13 @@ package routes
 
 import (
 	"github.com/gofiber/fiber/v2"
-	mysqlpersistence "github.com/hieronimusbudi/komodo-backend/framework/persistance/mysql"
+	"github.com/hieronimusbudi/komodo-backend/dependencies"
 )
 
-func All(app *fiber.App) {
-	conn := mysqlpersistence.Client
-	buyerRoutes(app, conn)
-	sellerRoutes(app, conn)
-	productRoutes(app, conn)
-	orderRoutes(app, conn)
+// this function combines all routes and passes dependencies to routes
+func All(app *fiber.App, d *dependencies.Dependencies) {
+	buyerRoutes(app, d)
+	sellerRoutes(app, d)
+	productRoutes(app, d)
+	orderRoutes(app, d)
 }

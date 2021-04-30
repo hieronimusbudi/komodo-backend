@@ -1,6 +1,9 @@
 package entity
 
-import "github.com/shopspring/decimal"
+import (
+	resterrors "github.com/hieronimusbudi/komodo-backend/framework/helpers/rest_errors"
+	"github.com/shopspring/decimal"
+)
 
 type Product struct {
 	ID          int64
@@ -10,30 +13,30 @@ type Product struct {
 	Seller      Seller
 }
 
-type ProductRequest struct {
+type ProductDTORequest struct {
 	Name        string  `json:"name"`
 	Description string  `json:"description"`
 	Price       float64 `json:"price"`
 	SellerID    int64   `json:"sellerId"`
 }
 
-type ProductResponse struct {
-	ID          int64          `json:"id"`
-	Name        string         `json:"name"`
-	Description string         `json:"description"`
-	Price       float64        `json:"price"`
-	Seller      SellerResponse `json:"seller"`
+type ProductDTOResponse struct {
+	ID          int64             `json:"id"`
+	Name        string            `json:"name"`
+	Description string            `json:"description"`
+	Price       float64           `json:"price"`
+	Seller      SellerDTOResponse `json:"seller"`
 }
 
 type ProductUseCase interface {
-	Store(product *Product) error
-	GetAll() ([]Product, error)
+	Store(product *Product) resterrors.RestErr
+	GetAll() ([]Product, resterrors.RestErr)
 }
 
 type ProductRepository interface {
-	GetAll() ([]Product, error)
-	GetByID(product *Product) error
-	Update(product *Product) error
-	Store(product *Product) error
-	Delete(product *Product) error
+	GetAll() ([]Product, resterrors.RestErr)
+	GetByID(product *Product) resterrors.RestErr
+	Update(product *Product) resterrors.RestErr
+	Store(product *Product) resterrors.RestErr
+	Delete(product *Product) resterrors.RestErr
 }

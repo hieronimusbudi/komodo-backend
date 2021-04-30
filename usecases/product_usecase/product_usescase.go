@@ -2,6 +2,7 @@ package productusecase
 
 import (
 	"github.com/hieronimusbudi/komodo-backend/entity"
+	resterrors "github.com/hieronimusbudi/komodo-backend/framework/helpers/rest_errors"
 )
 
 type productUsecase struct {
@@ -15,7 +16,7 @@ func NewProductUsecase(productRepo entity.ProductRepository) entity.ProductUseCa
 	}
 }
 
-func (p *productUsecase) Store(product *entity.Product) error {
+func (p *productUsecase) Store(product *entity.Product) resterrors.RestErr {
 	repoErr := p.productRepo.Store(product)
 	if repoErr != nil {
 		return repoErr
@@ -23,7 +24,7 @@ func (p *productUsecase) Store(product *entity.Product) error {
 	return nil
 }
 
-func (p *productUsecase) GetAll() ([]entity.Product, error) {
+func (p *productUsecase) GetAll() ([]entity.Product, resterrors.RestErr) {
 	products, err := p.productRepo.GetAll()
 	if err != nil {
 		return nil, err

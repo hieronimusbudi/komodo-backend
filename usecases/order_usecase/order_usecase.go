@@ -1,11 +1,9 @@
 package orderusecase
 
 import (
-	"log"
-	"time"
-
 	"github.com/hieronimusbudi/komodo-backend/entity"
-	"github.com/hieronimusbudi/komodo-backend/framework/helper"
+	"github.com/hieronimusbudi/komodo-backend/framework/helpers"
+	resterrors "github.com/hieronimusbudi/komodo-backend/framework/helpers/rest_errors"
 )
 
 type orderUsecase struct {
@@ -19,8 +17,14 @@ func NewOrderUsecase(orderRepo entity.OrderRepository) entity.OrderUseCase {
 	}
 }
 
-func (u *orderUsecase) Store(order *entity.Order) error {
-	order.OrderDate, _ = time.Parse("2006-01-02 15:04:05", time.Now().Format("2006-01-02 15:04:05"))
+func (u *orderUsecase) Store(order *entity.Order) resterrors.RestErr {
+	tn, err := helpers.GetTimeNow()
+	if err != nil {
+		rErr := resterrors.NewInternalServerError("error when trying to save data", err)
+		return rErr
+	}
+	order.OrderDate = tn
+
 	repoErr := u.orderRepo.Store(order)
 	if repoErr != nil {
 		return repoErr
@@ -28,13 +32,13 @@ func (u *orderUsecase) Store(order *entity.Order) error {
 	return nil
 }
 
-func (u *orderUsecase) GetByUserID(userID int64, userType helper.UserTypeEnum) ([]entity.Order, error) {
+func (u *orderUsecase) GetByUserID(userID int64, userType helpers.UserTypeEnum) ([]entity.Order, resterrors.RestErr) {
 	var orders []entity.Order
-	var err error
+	var err resterrors.RestErr
 
-	if userType == helper.BUYER_TYPE {
+	if userType == helpers.BUYER_TYPE {
 		orders, err = u.orderRepo.GetByBuyerID(userID)
-	} else if userType == helper.SELLER_TYPE {
+	} else if userType == helpers.SELLER_TYPE {
 		orders, err = u.orderRepo.GetBySellerID(userID)
 	}
 
@@ -45,19 +49,17 @@ func (u *orderUsecase) GetByUserID(userID int64, userType helper.UserTypeEnum) (
 	return orders, nil
 }
 
-func (u *orderUsecase) AcceptOrder(order *entity.Order) error {
-	err := u.orderRepo.GetByID(order)
+func (u *orderUsecase) AcceptOrder(order *entity.Order) (entity.Order, resterrors.RestErr) {
+	repoRes, err := u.orderRepo.GetByID(order)
 	if err != nil {
-		log.Println(1, err)
-		return err
+		return repoRes, err
 	}
 
-	order.Status = entity.ACCEPTED
-	updateErr := u.orderRepo.Update(order)
+	repoRes.Status = entity.ACCEPTED
+	updateErr := u.orderRepo.Update(&repoRes)
 	if updateErr != nil {
-		log.Println(2, err)
-		return updateErr
+		return repoRes, updateErr
 	}
 
-	return nil
+	return repoRes, nil
 }

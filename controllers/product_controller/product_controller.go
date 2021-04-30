@@ -1,12 +1,12 @@
 package productcontroller
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/hieronimusbudi/komodo-backend/entity"
-	"github.com/hieronimusbudi/komodo-backend/framework/helper"
+	"github.com/hieronimusbudi/komodo-backend/framework/helpers"
+	resterrors "github.com/hieronimusbudi/komodo-backend/framework/helpers/rest_errors"
 	"github.com/shopspring/decimal"
 )
 
@@ -19,6 +19,7 @@ type productController struct {
 	productUsecase entity.ProductUseCase
 }
 
+// NewProductController will create a object with ProductController interface representation
 func NewProductController(productUsecase entity.ProductUseCase) ProductController {
 	return &productController{
 		productUsecase: productUsecase,
@@ -27,10 +28,10 @@ func NewProductController(productUsecase entity.ProductUseCase) ProductControlle
 
 func (p *productController) Store(c *fiber.Ctx) error {
 	// parse product from request body
-	productReq := new(entity.ProductRequest)
+	productReq := new(entity.ProductDTORequest)
 	if err := c.BodyParser(productReq); err != nil {
-		log.Printf("%v \n", err)
-		return c.Status(http.StatusBadRequest).JSON(err.Error())
+		rErr := resterrors.NewRestError("unprocessable entity", http.StatusUnprocessableEntity, err.Error())
+		return c.Status(rErr.Status()).JSON(rErr.ErrorResponse())
 	}
 
 	// store Product
@@ -43,17 +44,17 @@ func (p *productController) Store(c *fiber.Ctx) error {
 	}
 	err := p.productUsecase.Store(&product)
 	if err != nil {
-		return c.Status(http.StatusBadRequest).JSON(err.Error())
+		return c.Status(err.Status()).JSON(err.ErrorResponse())
 	}
 
 	// transform Product to ProductResponse
 	fP, _ := product.Price.Float64()
-	res := entity.ProductResponse{
+	res := entity.ProductDTOResponse{
 		ID:          product.ID,
 		Name:        product.Name,
 		Description: product.Description,
 		Price:       fP,
-		Seller: entity.SellerResponse{
+		Seller: entity.SellerDTOResponse{
 			ID:            product.Seller.ID,
 			Email:         product.Seller.Email,
 			Name:          product.Seller.Name,
@@ -61,7 +62,7 @@ func (p *productController) Store(c *fiber.Ctx) error {
 		},
 	}
 
-	return c.Status(http.StatusCreated).JSON(helper.ResponseSuccess{
+	return c.Status(http.StatusCreated).JSON(helpers.SuccessResponse{
 		Data: res,
 	})
 }
@@ -69,20 +70,21 @@ func (p *productController) Store(c *fiber.Ctx) error {
 func (p *productController) GetAll(c *fiber.Ctx) error {
 	products, err := p.productUsecase.GetAll()
 	if err != nil {
-		return c.Status(http.StatusUnauthorized).JSON(err.Error())
+		rErr := resterrors.NewRestError("unprocessable entity", http.StatusUnprocessableEntity, err.Error())
+		return c.Status(rErr.Status()).JSON(rErr.ErrorResponse())
 	}
 
-	var productRes entity.ProductResponse
-	var res []entity.ProductResponse
+	var productRes entity.ProductDTOResponse
+	var res []entity.ProductDTOResponse
 
 	for _, product := range products {
 		fP, _ := product.Price.Float64()
-		productRes = entity.ProductResponse{
+		productRes = entity.ProductDTOResponse{
 			ID:          product.ID,
 			Name:        product.Name,
 			Description: product.Description,
 			Price:       fP,
-			Seller: entity.SellerResponse{
+			Seller: entity.SellerDTOResponse{
 				ID:            product.Seller.ID,
 				Email:         product.Seller.Email,
 				Name:          product.Seller.Name,
@@ -93,7 +95,7 @@ func (p *productController) GetAll(c *fiber.Ctx) error {
 		res = append(res, productRes)
 	}
 
-	return c.Status(http.StatusOK).JSON(helper.ResponseSuccess{
+	return c.Status(http.StatusOK).JSON(helpers.SuccessResponse{
 		Data: res,
 	})
 }

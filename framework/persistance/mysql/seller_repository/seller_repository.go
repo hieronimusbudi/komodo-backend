@@ -2,10 +2,10 @@ package sellerrepo
 
 import (
 	"database/sql"
-	"log"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/hieronimusbudi/komodo-backend/entity"
+	resterrors "github.com/hieronimusbudi/komodo-backend/framework/helpers/rest_errors"
 )
 
 const (
@@ -22,14 +22,15 @@ type mysqlSellerRepository struct {
 	Conn *sql.DB
 }
 
+// NewMysqlSellerRepository will create a object with entity.SellerRepositor interface representation
 func NewMysqlSellerRepository(Conn *sql.DB) entity.SellerRepository {
 	return &mysqlSellerRepository{Conn: Conn}
 }
 
-func (m *mysqlSellerRepository) GetAll() ([]entity.Seller, error) {
+func (m *mysqlSellerRepository) GetAll() ([]entity.Seller, resterrors.RestErr) {
 	dbRes, err := m.Conn.Query(queryGetAll)
 	if err != nil {
-		return nil, err
+		return nil, resterrors.NewInternalServerError("error when trying to get data", err)
 	}
 	defer m.Conn.Close()
 
@@ -40,7 +41,7 @@ func (m *mysqlSellerRepository) GetAll() ([]entity.Seller, error) {
 		var email, name, pickupAddress string
 		err = dbRes.Scan(&id, &email, &name, &pickupAddress)
 		if err != nil {
-			panic(err.Error())
+			return nil, resterrors.NewInternalServerError("error when trying to get data", err)
 		}
 
 		seller.ID = id
@@ -52,81 +53,80 @@ func (m *mysqlSellerRepository) GetAll() ([]entity.Seller, error) {
 	return res, nil
 }
 
-func (m *mysqlSellerRepository) GetByID(seller *entity.Seller) error {
+func (m *mysqlSellerRepository) GetByID(seller *entity.Seller) resterrors.RestErr {
 	stmt, err := m.Conn.Prepare(queryGetById)
 	if err != nil {
-		return err
+		return resterrors.NewInternalServerError("error when trying to get data", err)
 	}
 	defer stmt.Close()
 
 	dbRes := stmt.QueryRow(seller.ID)
 
-	if getErr := dbRes.Scan(&seller.ID, &seller.Email, &seller.Name, &seller.PickUpAddress); getErr != nil {
-		return getErr
+	if err := dbRes.Scan(&seller.ID, &seller.Email, &seller.Name, &seller.PickUpAddress); err != nil {
+		return resterrors.NewInternalServerError("error when trying to get data", err)
 	}
 	return nil
 }
 
-func (m *mysqlSellerRepository) Store(seller *entity.Seller) error {
+func (m *mysqlSellerRepository) Store(seller *entity.Seller) resterrors.RestErr {
 	stmt, err := m.Conn.Prepare(queryInsert)
 	if err != nil {
-		return err
+		return resterrors.NewInternalServerError("error when trying to save data", err)
 	}
 	defer stmt.Close()
 	// email, name, password, pickup_address
 	dbRes, err := stmt.Exec(seller.Email, seller.Name, seller.Password, seller.PickUpAddress)
 	if err != nil {
-		return err
+		return resterrors.NewInternalServerError("error when trying to save data", err)
 	}
 
 	sellerID, err := dbRes.LastInsertId()
 	if err != nil {
-		return err
+		return resterrors.NewInternalServerError("error when trying to save data", err)
 	}
-	log.Printf("%d \n", sellerID)
-	seller.ID = sellerID
 
+	seller.ID = sellerID
 	return nil
 }
 
-func (m *mysqlSellerRepository) Update(seller *entity.Seller) error {
+func (m *mysqlSellerRepository) Update(seller *entity.Seller) resterrors.RestErr {
 	stmt, err := m.Conn.Prepare(queryUpdate)
 	if err != nil {
-		return err
+		return resterrors.NewInternalServerError("error when trying to update data", err)
 	}
 	defer stmt.Close()
 
 	_, err = stmt.Exec(seller.Email, seller.Name, seller.PickUpAddress, seller.ID)
 	if err != nil {
-		return err
+		return resterrors.NewInternalServerError("error when trying to update data", err)
 	}
 	return nil
 }
 
-func (m *mysqlSellerRepository) Delete(seller *entity.Seller) error {
+func (m *mysqlSellerRepository) Delete(seller *entity.Seller) resterrors.RestErr {
 	stmt, err := m.Conn.Prepare(queryDelete)
 	if err != nil {
-		return err
+		return resterrors.NewInternalServerError("error when trying to delete data", err)
 	}
 	defer stmt.Close()
 
 	if _, err = stmt.Exec(seller.ID); err != nil {
-		return err
+		return resterrors.NewInternalServerError("error when trying to delete data", err)
 	}
 	return nil
 }
 
-func (m *mysqlSellerRepository) GetByEmail(seller *entity.Seller) (entity.Seller, error) {
+func (m *mysqlSellerRepository) GetByEmail(seller *entity.Seller) (entity.Seller, resterrors.RestErr) {
 	stmt, err := m.Conn.Prepare(queryFindByEmail)
 	if err != nil {
-		return *seller, err
+		return *seller, resterrors.NewInternalServerError("error when trying to get data", err)
 	}
 	defer stmt.Close()
 
 	dbRes := stmt.QueryRow(seller.Email)
 
-	if getErr := dbRes.Scan(&seller.ID, &seller.Email, &seller.Name, &seller.Password, &seller.PickUpAddress); getErr != nil {
-		return *seller, getErr
+	if err := dbRes.Scan(&seller.ID, &seller.Email, &seller.Name, &seller.Password, &seller.PickUpAddress); err != nil {
+		return *seller, resterrors.NewInternalServerError("error when trying to get data", err)
 	}
 	return *seller, nil
 }

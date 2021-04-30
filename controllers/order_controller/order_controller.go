@@ -1,13 +1,13 @@
 package ordercontroller
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gofiber/fiber/v2"
 	"github.com/hieronimusbudi/komodo-backend/entity"
-	"github.com/hieronimusbudi/komodo-backend/framework/helper"
+	"github.com/hieronimusbudi/komodo-backend/framework/helpers"
+	resterrors "github.com/hieronimusbudi/komodo-backend/framework/helpers/rest_errors"
 	"github.com/shopspring/decimal"
 )
 
@@ -21,6 +21,7 @@ type orderController struct {
 	orderUsecase entity.OrderUseCase
 }
 
+// NewOrderController will create a object with OrderController interface representation
 func NewOrderController(orderUsecase entity.OrderUseCase) OrderController {
 	return &orderController{
 		orderUsecase: orderUsecase,
@@ -31,7 +32,8 @@ func (oc *orderController) Store(c *fiber.Ctx) error {
 	// parse order from request body
 	oDTOReq := new(entity.OrderDTORequest)
 	if err := c.BodyParser(oDTOReq); err != nil {
-		return c.Status(http.StatusBadRequest).JSON(err.Error())
+		rErr := resterrors.NewRestError("unprocessable entity", http.StatusUnprocessableEntity, err.Error())
+		return c.Status(rErr.Status()).JSON(rErr.ErrorResponse())
 	}
 
 	// transform OrderDTORequest to Order
@@ -56,15 +58,15 @@ func (oc *orderController) Store(c *fiber.Ctx) error {
 	// store Order
 	err := oc.orderUsecase.Store(&order)
 	if err != nil {
-		return c.Status(http.StatusBadRequest).JSON(err.Error())
+		return c.Status(err.Status()).JSON(err.ErrorResponse())
 	}
 
 	// transform Order to OrderDTOResponse
 	fTP, _ := order.TotalPrice.Float64()
 	res := entity.OrderDTOResponse{
 		ID:                         order.ID,
-		Buyer:                      entity.BuyerResponse{ID: order.Buyer.ID},
-		Seller:                     entity.SellerResponse{ID: order.Seller.ID},
+		Buyer:                      entity.BuyerDTOResponse{ID: order.Buyer.ID},
+		Seller:                     entity.SellerDTOResponse{ID: order.Seller.ID},
 		DeliverySourceAddress:      order.DeliverySourceAddress,
 		DeliveryDestinationAddress: order.DeliveryDestinationAddress,
 		TotalQuantity:              order.TotalQuantity,
@@ -75,12 +77,12 @@ func (oc *orderController) Store(c *fiber.Ctx) error {
 
 	for _, od := range order.Items {
 		res.Items = append(res.Items, entity.OrderDetailDTOResponse{
-			Product:  entity.ProductResponse{ID: od.Product.ID},
+			Product:  entity.ProductDTOResponse{ID: od.Product.ID},
 			Quantity: od.Quantity,
 		})
 	}
 
-	return c.Status(http.StatusCreated).JSON(helper.ResponseSuccess{
+	return c.Status(http.StatusCreated).JSON(helpers.SuccessResponse{
 		Data: res,
 	})
 }
@@ -89,17 +91,18 @@ func (oc *orderController) GetByUserID(c *fiber.Ctx) error {
 	// take token from user value context
 	tokenClaims, ok := c.Context().UserValue("tokenClaims").(jwt.MapClaims)
 	if !ok {
-		return c.Status(http.StatusUnauthorized).JSON(errors.New("token claims not exists"))
+		rErr := resterrors.NewUnauthorizedError("token claims not exists")
+		return c.Status(rErr.Status()).JSON(rErr.ErrorResponse())
 	}
 
 	// get id & user type
 	userID := int64(tokenClaims["id"].(float64))
-	userType := helper.UserTypeEnum(tokenClaims["type"].(float64))
+	userType := helpers.UserTypeEnum(tokenClaims["type"].(float64))
 
 	// get orders by buyer/seller id
 	orders, err := oc.orderUsecase.GetByUserID(userID, userType)
 	if err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(err)
+		return c.Status(http.StatusInternalServerError).JSON(err.ErrorResponse())
 	}
 
 	// transform Order to OrderDTOResponse
@@ -109,10 +112,10 @@ func (oc *orderController) GetByUserID(c *fiber.Ctx) error {
 		fTP, _ := order.TotalPrice.Float64()
 		orderRes = entity.OrderDTOResponse{
 			ID: order.ID,
-			Buyer: entity.BuyerResponse{
+			Buyer: entity.BuyerDTOResponse{
 				ID: order.Buyer.ID,
 			},
-			Seller: entity.SellerResponse{
+			Seller: entity.SellerDTOResponse{
 				ID: order.Seller.ID,
 			},
 			DeliverySourceAddress:      order.DeliverySourceAddress,
@@ -138,7 +141,7 @@ func (oc *orderController) GetByUserID(c *fiber.Ctx) error {
 		res = append(res, orderRes)
 	}
 
-	return c.Status(http.StatusOK).JSON(helper.ResponseSuccess{
+	return c.Status(http.StatusOK).JSON(helpers.SuccessResponse{
 		Data: res,
 	})
 }
@@ -147,39 +150,40 @@ func (oc *orderController) AcceptOrder(c *fiber.Ctx) error {
 	// extract params
 	orderId, idErr := c.ParamsInt("id")
 	if idErr != nil {
-		return c.Status(http.StatusBadRequest).JSON(idErr.Error())
+		rErr := resterrors.NewBadRequestError(idErr.Error())
+		return c.Status(rErr.Status()).JSON(rErr.ErrorResponse())
 	}
 
 	// accept order
 	order := new(entity.Order)
 	order.ID = int64(orderId)
-	err := oc.orderUsecase.AcceptOrder(order)
+	uOrderRes, err := oc.orderUsecase.AcceptOrder(order)
 	if err != nil {
-		return c.Status(http.StatusBadRequest).JSON(err.Error())
+		return c.Status(err.Status()).JSON(err.ErrorResponse())
 	}
 
 	// transform Order to OrderDTOResponse
-	fTP, _ := order.TotalPrice.Float64()
+	fTP, _ := uOrderRes.TotalPrice.Float64()
 	res := entity.OrderDTOResponse{
-		ID:                         order.ID,
-		Buyer:                      entity.BuyerResponse{ID: order.Buyer.ID},
-		Seller:                     entity.SellerResponse{ID: order.Seller.ID},
-		DeliverySourceAddress:      order.DeliverySourceAddress,
-		DeliveryDestinationAddress: order.DeliveryDestinationAddress,
-		TotalQuantity:              order.TotalQuantity,
+		ID:                         uOrderRes.ID,
+		Buyer:                      entity.BuyerDTOResponse{ID: uOrderRes.Buyer.ID},
+		Seller:                     entity.SellerDTOResponse{ID: uOrderRes.Seller.ID},
+		DeliverySourceAddress:      uOrderRes.DeliverySourceAddress,
+		DeliveryDestinationAddress: uOrderRes.DeliveryDestinationAddress,
+		TotalQuantity:              uOrderRes.TotalQuantity,
 		TotalPrice:                 fTP,
-		Status:                     order.Status,
-		OrderDate:                  order.OrderDate,
+		Status:                     uOrderRes.Status,
+		OrderDate:                  uOrderRes.OrderDate,
 	}
 
-	for _, od := range order.Items {
+	for _, od := range uOrderRes.Items {
 		res.Items = append(res.Items, entity.OrderDetailDTOResponse{
-			Product:  entity.ProductResponse{ID: od.Product.ID},
+			Product:  entity.ProductDTOResponse{ID: od.Product.ID},
 			Quantity: od.Quantity,
 		})
 	}
 
-	return c.Status(http.StatusCreated).JSON(helper.ResponseSuccess{
+	return c.Status(http.StatusCreated).JSON(helpers.SuccessResponse{
 		Data: res,
 	})
 }

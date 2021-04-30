@@ -6,7 +6,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/hieronimusbudi/komodo-backend/config"
 	"github.com/hieronimusbudi/komodo-backend/entity"
-	"github.com/hieronimusbudi/komodo-backend/framework/helper"
+	"github.com/hieronimusbudi/komodo-backend/framework/helpers"
+	resterrors "github.com/hieronimusbudi/komodo-backend/framework/helpers/rest_errors"
 )
 
 type SellerController interface {
@@ -25,49 +26,59 @@ func NewSellerController(sellerUseCase entity.SellerUseCase) SellerController {
 }
 
 func (s *sellerController) Register(c *fiber.Ctx) error {
-	seller := new(entity.Seller)
-	if err := c.BodyParser(seller); err != nil {
-		return c.Status(http.StatusBadRequest).JSON(err.Error())
+	sellerReq := new(entity.SellerDTORequest)
+	if err := c.BodyParser(sellerReq); err != nil {
+		rErr := resterrors.NewRestError("unprocessable entity", http.StatusUnprocessableEntity, err.Error())
+		return c.Status(rErr.Status()).JSON(rErr.ErrorResponse())
 	}
 
-	err := s.sellerUseCase.Register(seller)
+	seller := entity.Seller{
+		Email:         sellerReq.Email,
+		Name:          sellerReq.Name,
+		Password:      sellerReq.Password,
+		PickUpAddress: sellerReq.PickUpAddress,
+	}
+	err := s.sellerUseCase.Register(&seller)
 	if err != nil {
-		return err
+		return c.Status(err.Status()).JSON(err.ErrorResponse())
 	}
 
-	return c.Status(http.StatusCreated).JSON(helper.ResponseSuccess{
+	return c.Status(http.StatusCreated).JSON(helpers.SuccessResponse{
 		Data: seller,
 	})
 }
 
 func (s *sellerController) Login(c *fiber.Ctx) error {
-	loginReq := new(entity.SellerLoginRequest)
+	loginReq := new(entity.SellerDTOLogin)
 	if err := c.BodyParser(loginReq); err != nil {
-		return c.Status(http.StatusBadRequest).JSON(err.Error())
+		rErr := resterrors.NewRestError("unprocessable entity", http.StatusUnprocessableEntity, err.Error())
+		return c.Status(rErr.Status()).JSON(rErr.ErrorResponse())
 	}
 
-	seller := entity.Seller{}
-	seller.Email = loginReq.Email
-	seller.Password = loginReq.Password
+	seller := entity.Seller{
+		Email:    loginReq.Email,
+		Password: loginReq.Password,
+	}
 	seller, err := s.sellerUseCase.Login(&seller)
 	if err != nil {
-		return c.Status(http.StatusUnauthorized).JSON(err.Error())
+		return c.Status(err.Status()).JSON(err.Error())
 	}
 
 	// create jwt token
-	jwtUserType := helper.SELLER_TYPE
-	token, tokenErr := helper.GenerateToken(&helper.UserJWTPayload{
+	jwtUserType := helpers.SELLER_TYPE
+	token, tokenErr := helpers.GenerateToken(&helpers.UserJWTPayload{
 		ID:    seller.ID,
 		Email: seller.Email,
 		Name:  seller.Name,
 		Type:  jwtUserType,
 	}, []byte(config.JWT_SECRET))
 	if tokenErr != nil {
-		return c.Status(http.StatusUnauthorized).JSON(tokenErr.Error())
+		rErr := resterrors.NewInternalServerError("generate token error ", tokenErr)
+		return c.Status(rErr.Status()).JSON(rErr.ErrorResponse())
 	}
 
-	res := helper.JWTResponse{
-		Data: entity.SellerResponse{
+	res := helpers.JWTResponse{
+		Data: entity.SellerDTOResponse{
 			ID:            seller.ID,
 			Email:         seller.Email,
 			Name:          seller.Name,

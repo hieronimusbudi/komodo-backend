@@ -2,7 +2,6 @@ package sellerrepo_test
 
 import (
 	"database/sql"
-	"log"
 	"regexp"
 	"testing"
 
@@ -29,9 +28,7 @@ type TestSuite struct {
 func (suite *TestSuite) SetupTest() {
 	var err error
 	suite.db, suite.mock, err = sqlmock.New()
-	if err != nil {
-		log.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-	}
+	suite.NoError(err)
 
 	// initiate repo
 	suite.repo = sellerrepo.NewMysqlSellerRepository(suite.db)
@@ -39,9 +36,7 @@ func (suite *TestSuite) SetupTest() {
 	// encrypt password
 	suite.password = "12345"
 	suite.hashedPassword, err = bcrypt.GenerateFromPassword([]byte(suite.password), bcrypt.DefaultCost)
-	if err != nil {
-		log.Fatalf(err.Error())
-	}
+	suite.NoError(err)
 
 	suite.expectedSeller1 = entity.Seller{
 		ID:            1,

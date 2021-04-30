@@ -2,7 +2,6 @@ package buyerrepo_test
 
 import (
 	"database/sql"
-	"log"
 	"regexp"
 	"testing"
 
@@ -19,21 +18,44 @@ type TestSuite struct {
 	mock           sqlmock.Sqlmock
 	password       string
 	hashedPassword []byte
+	expectedBuyer1 entity.Buyer
+	expectedBuyer2 entity.Buyer
+	expectedBuyer3 entity.Buyer
 }
 
 // before each test
 func (suite *TestSuite) SetupTest() {
 	var err error
 	suite.db, suite.mock, err = sqlmock.New()
-	if err != nil {
-		log.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-	}
+	suite.NoError(err)
 
 	// encrypt password
 	suite.password = "12345"
 	suite.hashedPassword, err = bcrypt.GenerateFromPassword([]byte(suite.password), bcrypt.DefaultCost)
-	if err != nil {
-		log.Fatalf(err.Error())
+	suite.NoError(err)
+
+	suite.expectedBuyer1 = entity.Buyer{
+		ID:             1,
+		Email:          "buyer1@mail.com",
+		Name:           "buyer",
+		Password:       string(suite.hashedPassword),
+		SendingAddress: "buyer address",
+	}
+
+	suite.expectedBuyer2 = entity.Buyer{
+		ID:             2,
+		Email:          "buyer2@mail.com",
+		Name:           "buyer",
+		Password:       string(suite.hashedPassword),
+		SendingAddress: "buyer address",
+	}
+
+	suite.expectedBuyer3 = entity.Buyer{
+		ID:             3,
+		Email:          "buyer3@mail.com",
+		Name:           "buyer",
+		Password:       string(suite.hashedPassword),
+		SendingAddress: "buyer address",
 	}
 }
 
@@ -46,11 +68,11 @@ func (suite *TestSuite) TestGetAll() {
 	prep := suite.mock.ExpectQuery(queryGetAll)
 
 	row1 := sqlmock.NewRows([]string{"id", "email", "name", "sending_address"}).
-		AddRow(1, "buyer1@mail.com", "buyer", "buyer address")
+		AddRow(suite.expectedBuyer1.ID, suite.expectedBuyer1.Email, suite.expectedBuyer1.Name, suite.expectedBuyer1.SendingAddress)
 	row2 := sqlmock.NewRows([]string{"id", "email", "name", "sending_address"}).
-		AddRow(2, "buyer2@mail.com", "buyer2", "buyer address")
+		AddRow(suite.expectedBuyer2.ID, suite.expectedBuyer2.Email, suite.expectedBuyer2.Name, suite.expectedBuyer2.SendingAddress)
 	row3 := sqlmock.NewRows([]string{"id", "email", "name", "sending_address"}).
-		AddRow(3, "buyer3@mail.com", "buyer3", "buyer address")
+		AddRow(suite.expectedBuyer3.ID, suite.expectedBuyer3.Email, suite.expectedBuyer3.Name, suite.expectedBuyer3.SendingAddress)
 
 	var rows = []*sqlmock.Rows{}
 	rows = append(rows, row1, row2, row3)
@@ -66,14 +88,13 @@ func (suite *TestSuite) TestGetAll() {
 func (suite *TestSuite) TestGetByID() {
 	queryGetById := "SELECT id, email, name, sending_address FROM buyers WHERE id=?;"
 	prep := suite.mock.ExpectPrepare(regexp.QuoteMeta(queryGetById))
-	buyerID := int64(1)
 
 	row1 := sqlmock.NewRows([]string{"id", "email", "name", "sending_address"}).
-		AddRow(buyerID, "buyer1@mail.com", "buyer", "buyer addressx")
-	prep.ExpectQuery().WithArgs(buyerID).WillReturnRows(row1)
+		AddRow(suite.expectedBuyer1.ID, suite.expectedBuyer1.Email, suite.expectedBuyer1.Name, suite.expectedBuyer1.SendingAddress)
+	prep.ExpectQuery().WithArgs(suite.expectedBuyer1.ID).WillReturnRows(row1)
 
 	buyer := new(entity.Buyer)
-	buyer.ID = buyerID
+	buyer.ID = suite.expectedBuyer1.ID
 
 	repo := buyerrepo.NewMysqlBuyerRepository(suite.db)
 	repoErr := repo.GetByID(buyer)
@@ -86,24 +107,16 @@ func (suite *TestSuite) TestStore() {
 	queryInsert := "INSERT INTO buyers(email, name, password, sending_address) VALUES(?, ?, ?, ?);"
 	prep := suite.mock.ExpectPrepare(regexp.QuoteMeta(queryInsert))
 
-	expectedBuyers := entity.Buyer{
-		ID:             1,
-		Email:          "buyer1@mail.com",
-		Name:           "buyer",
-		Password:       string(suite.hashedPassword),
-		SendingAddress: "buyer address",
-	}
-
 	prep.ExpectExec().
-		WithArgs(expectedBuyers.Email, expectedBuyers.Name, expectedBuyers.Password, expectedBuyers.SendingAddress).
-		WillReturnResult(sqlmock.NewResult(expectedBuyers.ID, 1))
+		WithArgs(suite.expectedBuyer1.Email, suite.expectedBuyer1.Name, suite.expectedBuyer1.Password, suite.expectedBuyer1.SendingAddress).
+		WillReturnResult(sqlmock.NewResult(suite.expectedBuyer1.ID, 1))
 
 	buyer := new(entity.Buyer)
-	buyer.ID = expectedBuyers.ID
-	buyer.Email = expectedBuyers.Email
-	buyer.Name = expectedBuyers.Name
-	buyer.Password = expectedBuyers.Password
-	buyer.SendingAddress = expectedBuyers.SendingAddress
+	buyer.ID = suite.expectedBuyer1.ID
+	buyer.Email = suite.expectedBuyer1.Email
+	buyer.Name = suite.expectedBuyer1.Name
+	buyer.Password = suite.expectedBuyer1.Password
+	buyer.SendingAddress = suite.expectedBuyer1.SendingAddress
 
 	repo := buyerrepo.NewMysqlBuyerRepository(suite.db)
 	repoErr := repo.Store(buyer)
@@ -116,24 +129,16 @@ func (suite *TestSuite) TestUpdate() {
 	queryUpdate := "UPDATE buyers SET email=?, name=?, sending_address=? WHERE id=?;"
 	prep := suite.mock.ExpectPrepare(regexp.QuoteMeta(queryUpdate))
 
-	expectedBuyers := entity.Buyer{
-		ID:             1,
-		Email:          "buyer1@mail.com",
-		Name:           "buyer",
-		Password:       string(suite.hashedPassword),
-		SendingAddress: "buyer address",
-	}
-
 	prep.ExpectExec().
-		WithArgs(expectedBuyers.Email, expectedBuyers.Name, expectedBuyers.SendingAddress, expectedBuyers.ID).
+		WithArgs(suite.expectedBuyer1.Email, suite.expectedBuyer1.Name, suite.expectedBuyer1.SendingAddress, suite.expectedBuyer1.ID).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
 	buyer := new(entity.Buyer)
-	buyer.ID = expectedBuyers.ID
-	buyer.Email = expectedBuyers.Email
-	buyer.Name = expectedBuyers.Name
-	buyer.Password = expectedBuyers.Password
-	buyer.SendingAddress = expectedBuyers.SendingAddress
+	buyer.ID = suite.expectedBuyer1.ID
+	buyer.Email = suite.expectedBuyer1.Email
+	buyer.Name = suite.expectedBuyer1.Name
+	buyer.Password = suite.expectedBuyer1.Password
+	buyer.SendingAddress = suite.expectedBuyer1.SendingAddress
 
 	repo := buyerrepo.NewMysqlBuyerRepository(suite.db)
 	repoErr := repo.Update(buyer)
@@ -146,20 +151,12 @@ func (suite *TestSuite) TestDelete() {
 	queryDelete := "DELETE FROM buyers WHERE id=?;"
 	prep := suite.mock.ExpectPrepare(regexp.QuoteMeta(queryDelete))
 
-	expectedBuyers := entity.Buyer{
-		ID:             1,
-		Email:          "buyer1@mail.com",
-		Name:           "buyer",
-		Password:       string(suite.hashedPassword),
-		SendingAddress: "buyer address",
-	}
-
 	prep.ExpectExec().
-		WithArgs(expectedBuyers.ID).
+		WithArgs(suite.expectedBuyer1.ID).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
 	buyer := new(entity.Buyer)
-	buyer.ID = expectedBuyers.ID
+	buyer.ID = suite.expectedBuyer1.ID
 
 	repo := buyerrepo.NewMysqlBuyerRepository(suite.db)
 	repoErr := repo.Delete(buyer)
@@ -172,20 +169,12 @@ func (suite *TestSuite) TestGetByEmail() {
 	queryFindByEmail := "SELECT id, email, name, password, sending_address FROM buyers WHERE email=?;"
 	prep := suite.mock.ExpectPrepare(regexp.QuoteMeta(queryFindByEmail))
 
-	expectedBuyers := entity.Buyer{
-		ID:             1,
-		Email:          "buyer1@mail.com",
-		Name:           "buyer",
-		Password:       string(suite.hashedPassword),
-		SendingAddress: "buyer address",
-	}
-
 	row1 := sqlmock.NewRows([]string{"id", "email", "name", "password", "sending_address"}).
-		AddRow(expectedBuyers.ID, expectedBuyers.Email, expectedBuyers.Name, expectedBuyers.Password, expectedBuyers.SendingAddress)
-	prep.ExpectQuery().WithArgs(expectedBuyers.Email).WillReturnRows(row1)
+		AddRow(suite.expectedBuyer1.ID, suite.expectedBuyer1.Email, suite.expectedBuyer1.Name, suite.expectedBuyer1.Password, suite.expectedBuyer1.SendingAddress)
+	prep.ExpectQuery().WithArgs(suite.expectedBuyer1.Email).WillReturnRows(row1)
 
 	buyer := new(entity.Buyer)
-	buyer.Email = expectedBuyers.Email
+	buyer.Email = suite.expectedBuyer1.Email
 
 	repo := buyerrepo.NewMysqlBuyerRepository(suite.db)
 	repoRes, repoErr := repo.GetByEmail(buyer)

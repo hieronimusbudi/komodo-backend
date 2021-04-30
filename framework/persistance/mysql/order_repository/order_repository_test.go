@@ -2,12 +2,11 @@ package orderrepo_test
 
 import (
 	"database/sql"
-	"log"
 	"regexp"
 	"testing"
-	"time"
 
 	"github.com/hieronimusbudi/komodo-backend/entity"
+	"github.com/hieronimusbudi/komodo-backend/framework/helpers"
 	orderrepo "github.com/hieronimusbudi/komodo-backend/framework/persistance/mysql/order_repository"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/suite"
@@ -35,9 +34,7 @@ type TestSuite struct {
 func (suite *TestSuite) SetupTest() {
 	var err error
 	suite.db, suite.mock, err = sqlmock.New()
-	if err != nil {
-		log.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-	}
+	suite.NoError(err)
 
 	// initiate repo
 	suite.repo = orderrepo.NewMysqlOrderRepository(suite.db)
@@ -45,9 +42,7 @@ func (suite *TestSuite) SetupTest() {
 	// encrypt password
 	suite.password = "12345"
 	suite.hashedPassword, err = bcrypt.GenerateFromPassword([]byte(suite.password), bcrypt.DefaultCost)
-	if err != nil {
-		log.Fatalf(err.Error())
-	}
+	suite.NoError(err)
 
 	suite.expectedBuyer1 = entity.Buyer{
 		ID:             1,
@@ -73,7 +68,8 @@ func (suite *TestSuite) SetupTest() {
 		Seller:      suite.expectedSeller1,
 	}
 
-	t, _ := time.Parse("2006-01-02 15:04:05", time.Now().Format("2006-01-02 15:04:05"))
+	t, err := helpers.GetTimeNow()
+	suite.NoError(err)
 	suite.expectedOrder1 = entity.Order{
 		ID:                         1,
 		Buyer:                      suite.expectedBuyer1,
@@ -95,7 +91,7 @@ func (suite *TestSuite) SetupTest() {
 		Quantity: 10,
 	}
 	suite.price = []uint8("181818.11")
-	suite.time = []uint8(time.Now().Format("2006-01-02 15:04:05"))
+	suite.time = []uint8(helpers.GetStringTimeNow())
 }
 
 func TestOrderRepo(t *testing.T) {

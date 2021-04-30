@@ -3,7 +3,8 @@ package entity
 import (
 	"time"
 
-	"github.com/hieronimusbudi/komodo-backend/framework/helper"
+	"github.com/hieronimusbudi/komodo-backend/framework/helpers"
+	resterrors "github.com/hieronimusbudi/komodo-backend/framework/helpers/rest_errors"
 	"github.com/shopspring/decimal"
 )
 
@@ -45,8 +46,8 @@ type OrderDTORequest struct {
 
 type OrderDTOResponse struct {
 	ID                         int64                    `json:"id"`
-	Buyer                      BuyerResponse            `json:"buyer"`
-	Seller                     SellerResponse           `json:"seller"`
+	Buyer                      BuyerDTOResponse         `json:"buyer"`
+	Seller                     SellerDTOResponse        `json:"seller"`
 	DeliverySourceAddress      string                   `json:"deliverySourceAddress"`
 	DeliveryDestinationAddress string                   `json:"deliveryDestinationAddress"`
 	TotalQuantity              int64                    `json:"totalQuantity"`
@@ -62,23 +63,23 @@ type OrderDetailDTORequest struct {
 }
 
 type OrderDetailDTOResponse struct {
-	Product  ProductResponse `json:"product"`
-	Quantity int64           `json:"quantity"`
-	Price    float64         `json:"price"`
+	Product  ProductDTOResponse `json:"product"`
+	Quantity int64              `json:"quantity"`
+	Price    float64            `json:"price"`
 }
 
 type OrderUseCase interface {
-	Store(order *Order) error
-	GetByUserID(userID int64, userType helper.UserTypeEnum) ([]Order, error)
-	AcceptOrder(order *Order) error
+	Store(order *Order) resterrors.RestErr
+	GetByUserID(userID int64, userType helpers.UserTypeEnum) ([]Order, resterrors.RestErr)
+	AcceptOrder(order *Order) (Order, resterrors.RestErr)
 }
 
 type OrderRepository interface {
-	GetAll() ([]Order, error)
-	GetByBuyerID(buyerID int64) ([]Order, error)
-	GetBySellerID(buyerID int64) ([]Order, error)
-	GetByID(order *Order) error
-	Update(order *Order) error
-	Store(order *Order) error
-	Delete(order *Order) error
+	GetAll() ([]Order, resterrors.RestErr)
+	GetByBuyerID(buyerID int64) ([]Order, resterrors.RestErr)
+	GetBySellerID(buyerID int64) ([]Order, resterrors.RestErr)
+	GetByID(order *Order) (Order, resterrors.RestErr)
+	Update(order *Order) resterrors.RestErr
+	Store(order *Order) resterrors.RestErr
+	Delete(order *Order) resterrors.RestErr
 }
