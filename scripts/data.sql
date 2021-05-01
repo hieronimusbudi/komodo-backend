@@ -22,7 +22,7 @@ USE `ecommerce_go`;
 
 LOCK TABLES `buyers` WRITE;
 /*!40000 ALTER TABLE `buyers` DISABLE KEYS */;
-INSERT INTO `buyers` VALUES (24,'buyer@mail.com','john buyer','$2a$10$ezSk09Ya2OyEPnc6m7cKfON1BlaZklJoVdXl6VSnOW6GU0SDLFL0G','Jl jalan');
+INSERT INTO `buyers` VALUES (1,'buyer@mail.com','john buyer','$2a$10$ezSk09Ya2OyEPnc6m7cKfON1BlaZklJoVdXl6VSnOW6GU0SDLFL0G','Jl jalan');
 /*!40000 ALTER TABLE `buyers` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -59,7 +59,7 @@ UNLOCK TABLES;
 
 LOCK TABLES `sellers` WRITE;
 /*!40000 ALTER TABLE `sellers` DISABLE KEYS */;
-INSERT INTO `sellers` VALUES (5,'seller@mail.com','john seller','$2a$10$1H0FijTkhaYb/jHBfzKSee1AD3lRvsy/IoFjoUb4uyRw/HSi2yUqS','Jl jalan');
+INSERT INTO `sellers` VALUES (1,'seller@mail.com','john seller','$2a$10$1H0FijTkhaYb/jHBfzKSee1AD3lRvsy/IoFjoUb4uyRw/HSi2yUqS','Jl jalan');
 /*!40000 ALTER TABLE `sellers` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;

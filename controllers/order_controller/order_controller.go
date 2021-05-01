@@ -179,9 +179,9 @@ func (octr *orderController) AcceptOrder(c *fiber.Ctx) error {
 		return c.Status(err.Status()).JSON(err.ErrorResponse())
 	}
 
-	// transform Order to OrderDTOResponse
+	// transform Order to OrderDTOSimpleResponse
 	fTP, _ := uOrderRes.TotalPrice.Float64()
-	res := entity.OrderDTOResponse{
+	res := entity.OrderDTOSimpleResponse{
 		ID:                         uOrderRes.ID,
 		BuyerID:                    order.Buyer.ID,
 		SellerID:                   order.Seller.ID,
@@ -193,16 +193,7 @@ func (octr *orderController) AcceptOrder(c *fiber.Ctx) error {
 		OrderDate:                  uOrderRes.OrderDate,
 	}
 
-	for _, od := range uOrderRes.Items {
-		res.Items = append(res.Items, entity.OrderDetailDTOResponse{
-			Product: entity.ProductDTOResponse{
-				ID: od.Product.ID,
-			},
-			Quantity: od.Quantity,
-		})
-	}
-
-	return c.Status(http.StatusCreated).JSON(helpers.SuccessResponse{
+	return c.Status(http.StatusOK).JSON(helpers.SuccessResponse{
 		Data: res,
 	})
 }

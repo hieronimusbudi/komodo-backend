@@ -60,10 +60,26 @@ type OrderDTOResponse struct {
 	Items                      []OrderDetailDTOResponse `json:"items"`
 }
 
+type OrderDTOSimpleResponse struct {
+	ID                         int64           `json:"id"`
+	BuyerID                    int64           `json:"buyerId"`
+	SellerID                   int64           `json:"sellerId"`
+	DeliverySourceAddress      string          `json:"deliverySourceAddress"`
+	DeliveryDestinationAddress string          `json:"deliveryDestinationAddress"`
+	TotalQuantity              int64           `json:"totalQuantity"`
+	TotalPrice                 float64         `json:"totalPrice"`
+	Status                     OrderStatusEnum `json:"status"`
+	OrderDate                  time.Time       `json:"orderDate"`
+}
+
 type OrderDetailDTOResponse struct {
 	Product  ProductDTOResponse `json:"product"`
 	Quantity int64              `json:"quantity"`
 	Price    float64            `json:"price"`
+}
+
+type OrderDetailSimpleDTOResponse struct {
+	ProductID int64 `json:"productId"`
 }
 
 type OrderUseCase interface {
