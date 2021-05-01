@@ -94,3 +94,4 @@ docker-compose up --build
 | 9   | /orders/:id/accept  | PUT    | yes         | seller    |
 
 ## Database Design
+![db_design](https://user-images.githubusercontent.com/28037175/116769487-b67d8e80-aa66-11eb-8820-cfac90be9eeb.png)
