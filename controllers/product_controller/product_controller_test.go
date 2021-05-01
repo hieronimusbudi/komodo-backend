@@ -2,8 +2,12 @@ package productcontroller_test
 
 import (
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	productcontroller "github.com/hieronimusbudi/komodo-backend/controllers/product_controller"
 	"github.com/hieronimusbudi/komodo-backend/entity"
@@ -21,12 +25,14 @@ type TestSuite struct {
 	mockProductDTOReq entity.ProductDTORequest
 	mockSeller        entity.Seller
 	app               *fiber.App
+	validate          *validator.Validate
 }
 
 // for each test
 func (suite *TestSuite) SetupTest() {
 	suite.mockProductUCase = new(mocks.ProductUseCase)
 	suite.app = fiber.New()
+	suite.validate = validator.New()
 
 	suite.mockSeller = entity.Seller{
 		Email:         "seller1@mail.com",
@@ -67,10 +73,40 @@ func (suite *TestSuite) TestStore() {
 	ctx.Request().SetBody(j)
 	defer suite.app.ReleaseCtx(ctx)
 
-	handler := productcontroller.NewProductController(suite.mockProductUCase)
+	handler := productcontroller.NewProductController(suite.mockProductUCase, suite.validate)
 
 	hErr := handler.Store(ctx)
 	suite.NoError(hErr)
+}
+
+func (suite *TestSuite) TestStoreError() {
+	// empty name
+	suite.mockProductDTOReq.Name = ""
+	// empty price
+	suite.mockProductDTOReq.Price = 0
+	// empty seller id
+	suite.mockProductDTOReq.SellerID = 0
+
+	j, err := json.Marshal(suite.mockProductDTOReq)
+	suite.NoError(err)
+
+	handler := productcontroller.NewProductController(suite.mockProductUCase, suite.validate)
+	suite.app.Post("/products",
+		func(c *fiber.Ctx) error {
+			c.Request().Header.SetContentType(fiber.MIMEApplicationJSON)
+			return c.Next()
+		},
+		handler.Store,
+	)
+
+	resp, err := suite.app.Test(
+		httptest.NewRequest(
+			http.MethodPost,
+			"http://example.com/products",
+			strings.NewReader(string(j)),
+		))
+	suite.NoError(err)
+	suite.Equal(http.StatusBadRequest, resp.StatusCode)
 }
 
 func (suite *TestSuite) TestGetAll() {
@@ -81,7 +117,7 @@ func (suite *TestSuite) TestGetAll() {
 	ctx.Request().Header.SetContentType(fiber.MIMEApplicationJSON)
 	defer suite.app.ReleaseCtx(ctx)
 
-	handler := productcontroller.NewProductController(suite.mockProductUCase)
+	handler := productcontroller.NewProductController(suite.mockProductUCase, suite.validate)
 
 	hErr := handler.GetAll(ctx)
 	suite.NoError(hErr)

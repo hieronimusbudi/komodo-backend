@@ -2,7 +2,6 @@ package buyerrepo
 
 import (
 	"database/sql"
-	"log"
 
 	"github.com/hieronimusbudi/komodo-backend/entity"
 	resterrors "github.com/hieronimusbudi/komodo-backend/framework/helpers/rest_errors"
@@ -62,8 +61,10 @@ func (m *mysqlBuyerRepository) GetByID(buyer *entity.Buyer) resterrors.RestErr {
 
 	dbRes := stmt.QueryRow(buyer.ID)
 	if err := dbRes.Scan(&buyer.ID, &buyer.Email, &buyer.Name, &buyer.SendingAddress); err != nil {
+
 		return resterrors.NewInternalServerError("error when trying to get data", err)
 	}
+
 	return nil
 }
 
@@ -84,7 +85,7 @@ func (m *mysqlBuyerRepository) Store(buyer *entity.Buyer) resterrors.RestErr {
 	if err != nil {
 		return resterrors.NewInternalServerError("error when trying to save data", err)
 	}
-	log.Printf("%d \n", buyerID)
+
 	buyer.ID = buyerID
 
 	return nil

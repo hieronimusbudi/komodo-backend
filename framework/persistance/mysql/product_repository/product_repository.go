@@ -64,26 +64,26 @@ func (m *mysqlProductRepository) GetAll() ([]entity.Product, resterrors.RestErr)
 	return res, nil
 }
 
-func (m *mysqlProductRepository) GetByID(product *entity.Product) resterrors.RestErr {
+func (m *mysqlProductRepository) GetByID(product *entity.Product) (entity.Product, resterrors.RestErr) {
 	stmt, err := m.Conn.Prepare(queryGetById)
 	if err != nil {
-		return resterrors.NewInternalServerError("error when trying to get data", err)
+		return *product, resterrors.NewInternalServerError("error when trying to get data", err)
 	}
 	defer stmt.Close()
 
 	var price []uint8
 	dbRes := stmt.QueryRow(product.ID)
 	if err := dbRes.Scan(&product.ID, &product.Name, &product.Description, &price, &product.Seller.ID); err != nil {
-		return resterrors.NewInternalServerError("error when trying to get data", err)
+		return *product, resterrors.NewInternalServerError("error when trying to get data", err)
 	}
 
 	dP, err := decimal.NewFromString(string(price))
 	if err != nil {
-		return resterrors.NewInternalServerError("error when trying to get data", err)
+		return *product, resterrors.NewInternalServerError("error when trying to get data", err)
 	}
 	product.Price = dP
 
-	return nil
+	return *product, nil
 }
 
 func (m *mysqlProductRepository) Store(product *entity.Product) resterrors.RestErr {

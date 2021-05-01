@@ -3,6 +3,7 @@ package buyercontroller
 import (
 	"net/http"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/hieronimusbudi/komodo-backend/config"
 	"github.com/hieronimusbudi/komodo-backend/entity"
@@ -17,19 +18,29 @@ type BuyerController interface {
 
 type buyerController struct {
 	buyerUsecase entity.BuyerUseCase
+	validate     *validator.Validate
 }
 
 // NewBuyerController will create a object with BuyerController interface representation
-func NewBuyerController(buyerUsecase entity.BuyerUseCase) BuyerController {
+func NewBuyerController(u entity.BuyerUseCase, v *validator.Validate) BuyerController {
 	return &buyerController{
-		buyerUsecase: buyerUsecase,
+		buyerUsecase: u,
+		validate:     v,
 	}
 }
 
-func (b *buyerController) Register(c *fiber.Ctx) error {
+func (bctr *buyerController) Register(c *fiber.Ctx) error {
 	buyerReq := new(entity.BuyerDTORequest)
 	if err := c.BodyParser(buyerReq); err != nil {
 		rErr := resterrors.NewRestError("unprocessable entity", http.StatusUnprocessableEntity, err.Error())
+		return c.Status(rErr.Status()).JSON(rErr.ErrorResponse())
+	}
+
+	// validate request
+	vErr := bctr.validate.Struct(buyerReq)
+	if vErr != nil {
+		message, _ := helpers.CreateValidationMessage(vErr)
+		rErr := resterrors.NewBadRequestError(message)
 		return c.Status(rErr.Status()).JSON(rErr.ErrorResponse())
 	}
 
@@ -39,7 +50,7 @@ func (b *buyerController) Register(c *fiber.Ctx) error {
 		Password:       buyerReq.Password,
 		SendingAddress: buyerReq.SendingAddress,
 	}
-	err := b.buyerUsecase.Register(&buyer)
+	err := bctr.buyerUsecase.Register(&buyer)
 	if err != nil {
 		return c.Status(err.Status()).JSON(err.ErrorResponse())
 	}
@@ -55,10 +66,18 @@ func (b *buyerController) Register(c *fiber.Ctx) error {
 	})
 }
 
-func (b *buyerController) Login(c *fiber.Ctx) error {
+func (bctr *buyerController) Login(c *fiber.Ctx) error {
 	loginReq := new(entity.BuyerDTOLogin)
 	if err := c.BodyParser(loginReq); err != nil {
 		rErr := resterrors.NewRestError("unprocessable entity", http.StatusUnprocessableEntity, err.Error())
+		return c.Status(rErr.Status()).JSON(rErr.ErrorResponse())
+	}
+
+	// validate request
+	vErr := bctr.validate.Struct(loginReq)
+	if vErr != nil {
+		message, _ := helpers.CreateValidationMessage(vErr)
+		rErr := resterrors.NewBadRequestError(message)
 		return c.Status(rErr.Status()).JSON(rErr.ErrorResponse())
 	}
 
@@ -66,7 +85,7 @@ func (b *buyerController) Login(c *fiber.Ctx) error {
 		Email:    loginReq.Email,
 		Password: loginReq.Password,
 	}
-	buyer, err := b.buyerUsecase.Login(&buyer)
+	buyer, err := bctr.buyerUsecase.Login(&buyer)
 	if err != nil {
 		return c.Status(err.Status()).JSON(err.ErrorResponse())
 	}

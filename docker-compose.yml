@@ -1,0 +1,26 @@
+version: '3'
+services:
+  mysql:
+    image: mysql:latest
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: 1
+    ports:
+      - 3306:3306
+    volumes:
+      - './scripts/schema.sql:/docker-entrypoint-initdb.d/1.sql'
+      - './scripts/data.sql:/docker-entrypoint-initdb.d/2.sql'
+  backend:
+    build: .
+    depends_on:
+      - mysql
+    environment:
+      WAIT_HOSTS: mysql:3306
+      PORT: 9000
+      JWT_SECRET: secret
+      MYSQL_USER: root
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_PASSWORD:
+      MYSQL_DATABASE: ecommerce_go
+    ports:
+      - 9000:9000

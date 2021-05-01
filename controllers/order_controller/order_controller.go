@@ -4,11 +4,11 @@ import (
 	"net/http"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/hieronimusbudi/komodo-backend/entity"
 	"github.com/hieronimusbudi/komodo-backend/framework/helpers"
 	resterrors "github.com/hieronimusbudi/komodo-backend/framework/helpers/rest_errors"
-	"github.com/shopspring/decimal"
 )
 
 type OrderController interface {
@@ -19,16 +19,18 @@ type OrderController interface {
 
 type orderController struct {
 	orderUsecase entity.OrderUseCase
+	validate     *validator.Validate
 }
 
 // NewOrderController will create a object with OrderController interface representation
-func NewOrderController(orderUsecase entity.OrderUseCase) OrderController {
+func NewOrderController(o entity.OrderUseCase, v *validator.Validate) OrderController {
 	return &orderController{
-		orderUsecase: orderUsecase,
+		orderUsecase: o,
+		validate:     v,
 	}
 }
 
-func (oc *orderController) Store(c *fiber.Ctx) error {
+func (octr *orderController) Store(c *fiber.Ctx) error {
 	// parse order from request body
 	oDTOReq := new(entity.OrderDTORequest)
 	if err := c.BodyParser(oDTOReq); err != nil {
@@ -36,27 +38,33 @@ func (oc *orderController) Store(c *fiber.Ctx) error {
 		return c.Status(rErr.Status()).JSON(rErr.ErrorResponse())
 	}
 
-	// transform OrderDTORequest to Order
-	dTP := decimal.NewFromFloat(oDTOReq.TotalPrice)
+	// validate request
+	vErr := octr.validate.Struct(oDTOReq)
+	if vErr != nil {
+		message, _ := helpers.CreateValidationMessage(vErr)
+		rErr := resterrors.NewBadRequestError(message)
+		return c.Status(rErr.Status()).JSON(rErr.ErrorResponse())
+	}
+
 	order := entity.Order{
 		Buyer:                      entity.Buyer{ID: oDTOReq.BuyerID},
 		Seller:                     entity.Seller{ID: oDTOReq.SellerID},
 		DeliverySourceAddress:      oDTOReq.DeliverySourceAddress,
 		DeliveryDestinationAddress: oDTOReq.DeliveryDestinationAddress,
-		TotalQuantity:              oDTOReq.TotalQuantity,
-		TotalPrice:                 dTP,
 		Status:                     entity.PENDING,
 	}
 
 	for _, od := range oDTOReq.Items {
 		order.Items = append(order.Items, entity.OrderDetail{
-			Product:  entity.Product{ID: od.ProductId},
+			Product: entity.Product{
+				ID: od.ProductId,
+			},
 			Quantity: od.Quantity,
 		})
 	}
 
 	// store Order
-	err := oc.orderUsecase.Store(&order)
+	err := octr.orderUsecase.Store(&order)
 	if err != nil {
 		return c.Status(err.Status()).JSON(err.ErrorResponse())
 	}
@@ -65,8 +73,8 @@ func (oc *orderController) Store(c *fiber.Ctx) error {
 	fTP, _ := order.TotalPrice.Float64()
 	res := entity.OrderDTOResponse{
 		ID:                         order.ID,
-		Buyer:                      entity.BuyerDTOResponse{ID: order.Buyer.ID},
-		Seller:                     entity.SellerDTOResponse{ID: order.Seller.ID},
+		BuyerID:                    order.Buyer.ID,
+		SellerID:                   order.Seller.ID,
 		DeliverySourceAddress:      order.DeliverySourceAddress,
 		DeliveryDestinationAddress: order.DeliveryDestinationAddress,
 		TotalQuantity:              order.TotalQuantity,
@@ -76,8 +84,16 @@ func (oc *orderController) Store(c *fiber.Ctx) error {
 	}
 
 	for _, od := range order.Items {
+		fP, _ := od.Product.Price.Float64()
 		res.Items = append(res.Items, entity.OrderDetailDTOResponse{
-			Product:  entity.ProductDTOResponse{ID: od.Product.ID},
+			Product: entity.ProductDTOResponse{
+				ID:          od.Product.ID,
+				Name:        od.Product.Name,
+				Description: od.Product.Description,
+				Price:       fP,
+				SellerID:    od.Product.Seller.ID,
+			},
+			Price:    fP,
 			Quantity: od.Quantity,
 		})
 	}
@@ -87,7 +103,7 @@ func (oc *orderController) Store(c *fiber.Ctx) error {
 	})
 }
 
-func (oc *orderController) GetByUserID(c *fiber.Ctx) error {
+func (octr *orderController) GetByUserID(c *fiber.Ctx) error {
 	// take token from user value context
 	tokenClaims, ok := c.Context().UserValue("tokenClaims").(jwt.MapClaims)
 	if !ok {
@@ -100,7 +116,7 @@ func (oc *orderController) GetByUserID(c *fiber.Ctx) error {
 	userType := helpers.UserTypeEnum(tokenClaims["type"].(float64))
 
 	// get orders by buyer/seller id
-	orders, err := oc.orderUsecase.GetByUserID(userID, userType)
+	orders, err := octr.orderUsecase.GetByUserID(userID, userType)
 	if err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(err.ErrorResponse())
 	}
@@ -111,13 +127,9 @@ func (oc *orderController) GetByUserID(c *fiber.Ctx) error {
 	for _, order := range orders {
 		fTP, _ := order.TotalPrice.Float64()
 		orderRes = entity.OrderDTOResponse{
-			ID: order.ID,
-			Buyer: entity.BuyerDTOResponse{
-				ID: order.Buyer.ID,
-			},
-			Seller: entity.SellerDTOResponse{
-				ID: order.Seller.ID,
-			},
+			ID:                         order.ID,
+			BuyerID:                    order.Buyer.ID,
+			SellerID:                   order.Seller.ID,
 			DeliverySourceAddress:      order.DeliverySourceAddress,
 			DeliveryDestinationAddress: order.DeliveryDestinationAddress,
 			TotalQuantity:              order.TotalQuantity,
@@ -128,12 +140,17 @@ func (oc *orderController) GetByUserID(c *fiber.Ctx) error {
 
 		odRow := entity.OrderDetailDTOResponse{}
 		orderRes.Items = []entity.OrderDetailDTOResponse{}
-		for _, od := range order.Items {
-			odRow.Product.ID = od.Product.ID
-			odRow.Quantity = od.Quantity
 
+		for _, od := range order.Items {
+			odRow.Quantity = od.Quantity
 			fP, _ := od.Product.Price.Float64()
+
 			odRow.Price = fP
+			odRow.Product.ID = od.Product.ID
+			odRow.Product.Price = fP
+			odRow.Product.Description = od.Product.Description
+			odRow.Product.Name = od.Product.Name
+			odRow.Product.SellerID = od.Product.Seller.ID
 
 			orderRes.Items = append(orderRes.Items, odRow)
 		}
@@ -146,7 +163,7 @@ func (oc *orderController) GetByUserID(c *fiber.Ctx) error {
 	})
 }
 
-func (oc *orderController) AcceptOrder(c *fiber.Ctx) error {
+func (octr *orderController) AcceptOrder(c *fiber.Ctx) error {
 	// extract params
 	orderId, idErr := c.ParamsInt("id")
 	if idErr != nil {
@@ -157,7 +174,7 @@ func (oc *orderController) AcceptOrder(c *fiber.Ctx) error {
 	// accept order
 	order := new(entity.Order)
 	order.ID = int64(orderId)
-	uOrderRes, err := oc.orderUsecase.AcceptOrder(order)
+	uOrderRes, err := octr.orderUsecase.AcceptOrder(order)
 	if err != nil {
 		return c.Status(err.Status()).JSON(err.ErrorResponse())
 	}
@@ -166,8 +183,8 @@ func (oc *orderController) AcceptOrder(c *fiber.Ctx) error {
 	fTP, _ := uOrderRes.TotalPrice.Float64()
 	res := entity.OrderDTOResponse{
 		ID:                         uOrderRes.ID,
-		Buyer:                      entity.BuyerDTOResponse{ID: uOrderRes.Buyer.ID},
-		Seller:                     entity.SellerDTOResponse{ID: uOrderRes.Seller.ID},
+		BuyerID:                    order.Buyer.ID,
+		SellerID:                   order.Seller.ID,
 		DeliverySourceAddress:      uOrderRes.DeliverySourceAddress,
 		DeliveryDestinationAddress: uOrderRes.DeliveryDestinationAddress,
 		TotalQuantity:              uOrderRes.TotalQuantity,
@@ -178,7 +195,9 @@ func (oc *orderController) AcceptOrder(c *fiber.Ctx) error {
 
 	for _, od := range uOrderRes.Items {
 		res.Items = append(res.Items, entity.OrderDetailDTOResponse{
-			Product:  entity.ProductDTOResponse{ID: od.Product.ID},
+			Product: entity.ProductDTOResponse{
+				ID: od.Product.ID,
+			},
 			Quantity: od.Quantity,
 		})
 	}

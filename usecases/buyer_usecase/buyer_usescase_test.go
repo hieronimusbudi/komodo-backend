@@ -19,9 +19,20 @@ func TestRegister(t *testing.T) {
 		SendingAddress: "sending address",
 	}
 
+	mockBuyerEmpty := entity.Buyer{}
+
+	mockBuyerExist := entity.Buyer{
+		ID:             1,
+		Email:          "buyer1@mail.com",
+		Name:           "buyer",
+		Password:       "$2a$10$634oWhFDuTohq7suxGn5TuRQ8BGmWu9wFfiHZelLwfqSgWk/45vzu",
+		SendingAddress: "sending address",
+	}
+
 	t.Run("success", func(t *testing.T) {
 		tmpMockBuyer := mockBuyer
 
+		mockBuyerRepo.On("GetByEmail", mock.AnythingOfType("*entity.Buyer")).Return(mockBuyerEmpty, nil).Once()
 		mockBuyerRepo.On("Store", mock.AnythingOfType("*entity.Buyer")).Return(nil).Once()
 
 		u := buyerusecase.NewBuyerUsecase(mockBuyerRepo)
@@ -29,6 +40,17 @@ func TestRegister(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.Equal(t, mockBuyer.Email, tmpMockBuyer.Email)
+		mockBuyerRepo.AssertExpectations(t)
+	})
+
+	t.Run("user is already exist", func(t *testing.T) {
+		tmpMockBuyer := mockBuyer
+
+		mockBuyerRepo.On("GetByEmail", mock.AnythingOfType("*entity.Buyer")).Return(mockBuyerExist, nil).Once()
+		u := buyerusecase.NewBuyerUsecase(mockBuyerRepo)
+		err := u.Register(&tmpMockBuyer)
+
+		assert.Error(t, err)
 		mockBuyerRepo.AssertExpectations(t)
 	})
 }

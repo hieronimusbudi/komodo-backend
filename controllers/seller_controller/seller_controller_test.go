@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	sellercontroller "github.com/hieronimusbudi/komodo-backend/controllers/seller_controller"
 	"github.com/hieronimusbudi/komodo-backend/entity"
@@ -20,12 +21,14 @@ type TestSuite struct {
 	mockSellerDTOReq   entity.SellerDTORequest
 	mockSellerLoginReq entity.SellerDTOLogin
 	app                *fiber.App
+	validate           *validator.Validate
 }
 
 // for each test
 func (suite *TestSuite) SetupTest() {
 	suite.mockSellerUCase = new(mocks.SellerUseCase)
 	suite.app = fiber.New()
+	suite.validate = validator.New()
 
 	suite.mockSeller = entity.Seller{
 		Email:         "seller1@mail.com",
@@ -63,7 +66,7 @@ func (suite *TestSuite) TestRegister() {
 	ctx.Request().SetBody(j)
 	defer suite.app.ReleaseCtx(ctx)
 
-	handler := sellercontroller.NewSellerController(suite.mockSellerUCase)
+	handler := sellercontroller.NewSellerController(suite.mockSellerUCase, suite.validate)
 
 	hErr := handler.Register(ctx)
 	suite.NoError(hErr)
@@ -81,7 +84,7 @@ func (suite *TestSuite) TestLogin() {
 	ctx.Request().SetBody(j)
 	defer suite.app.ReleaseCtx(ctx)
 
-	handler := sellercontroller.NewSellerController(suite.mockSellerUCase)
+	handler := sellercontroller.NewSellerController(suite.mockSellerUCase, suite.validate)
 
 	hErr := handler.Login(ctx)
 	suite.NoError(hErr)

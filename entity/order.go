@@ -35,19 +35,22 @@ type OrderDetail struct {
 }
 
 type OrderDTORequest struct {
-	BuyerID                    int64                   `json:"buyerId"`
-	SellerID                   int64                   `json:"sellerId"`
-	DeliverySourceAddress      string                  `json:"deliverySourceAddress"`
-	DeliveryDestinationAddress string                  `json:"deliveryDestinationAddress"`
-	TotalQuantity              int64                   `json:"totalQuantity"`
-	TotalPrice                 float64                 `json:"totalPrice"`
-	Items                      []OrderDetailDTORequest `json:"items"`
+	BuyerID                    int64                   `json:"buyerId" validate:"required"`
+	SellerID                   int64                   `json:"sellerId" validate:"required"`
+	DeliverySourceAddress      string                  `json:"deliverySourceAddress" validate:"gte=0,lte=511"`
+	DeliveryDestinationAddress string                  `json:"deliveryDestinationAddress" validate:"gte=0,lte=511"`
+	Items                      []OrderDetailDTORequest `json:"items" validate:"required,dive"`
+}
+
+type OrderDetailDTORequest struct {
+	ProductId int64 `json:"productId" validate:"required"`
+	Quantity  int64 `json:"quantity" validate:"required,gte=0"`
 }
 
 type OrderDTOResponse struct {
 	ID                         int64                    `json:"id"`
-	Buyer                      BuyerDTOResponse         `json:"buyer"`
-	Seller                     SellerDTOResponse        `json:"seller"`
+	BuyerID                    int64                    `json:"buyerId"`
+	SellerID                   int64                    `json:"sellerId"`
 	DeliverySourceAddress      string                   `json:"deliverySourceAddress"`
 	DeliveryDestinationAddress string                   `json:"deliveryDestinationAddress"`
 	TotalQuantity              int64                    `json:"totalQuantity"`
@@ -55,11 +58,6 @@ type OrderDTOResponse struct {
 	Status                     OrderStatusEnum          `json:"status"`
 	OrderDate                  time.Time                `json:"orderDate"`
 	Items                      []OrderDetailDTOResponse `json:"items"`
-}
-
-type OrderDetailDTORequest struct {
-	ProductId int64 `json:"productId"`
-	Quantity  int64 `json:"quantity"`
 }
 
 type OrderDetailDTOResponse struct {

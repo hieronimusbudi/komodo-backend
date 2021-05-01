@@ -3,6 +3,7 @@ package sellercontroller
 import (
 	"net/http"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/hieronimusbudi/komodo-backend/config"
 	"github.com/hieronimusbudi/komodo-backend/entity"
@@ -17,18 +18,28 @@ type SellerController interface {
 
 type sellerController struct {
 	sellerUseCase entity.SellerUseCase
+	validate      *validator.Validate
 }
 
-func NewSellerController(sellerUseCase entity.SellerUseCase) SellerController {
+func NewSellerController(u entity.SellerUseCase, v *validator.Validate) SellerController {
 	return &sellerController{
-		sellerUseCase: sellerUseCase,
+		sellerUseCase: u,
+		validate:      v,
 	}
 }
 
-func (s *sellerController) Register(c *fiber.Ctx) error {
+func (sctr *sellerController) Register(c *fiber.Ctx) error {
 	sellerReq := new(entity.SellerDTORequest)
 	if err := c.BodyParser(sellerReq); err != nil {
 		rErr := resterrors.NewRestError("unprocessable entity", http.StatusUnprocessableEntity, err.Error())
+		return c.Status(rErr.Status()).JSON(rErr.ErrorResponse())
+	}
+
+	// validate request
+	vErr := sctr.validate.Struct(sellerReq)
+	if vErr != nil {
+		message, _ := helpers.CreateValidationMessage(vErr)
+		rErr := resterrors.NewBadRequestError(message)
 		return c.Status(rErr.Status()).JSON(rErr.ErrorResponse())
 	}
 
@@ -38,20 +49,34 @@ func (s *sellerController) Register(c *fiber.Ctx) error {
 		Password:      sellerReq.Password,
 		PickUpAddress: sellerReq.PickUpAddress,
 	}
-	err := s.sellerUseCase.Register(&seller)
+	err := sctr.sellerUseCase.Register(&seller)
 	if err != nil {
 		return c.Status(err.Status()).JSON(err.ErrorResponse())
 	}
 
+	sellerRes := entity.SellerDTOResponse{
+		ID:            seller.ID,
+		Email:         seller.Email,
+		Name:          seller.Name,
+		PickUpAddress: seller.PickUpAddress,
+	}
 	return c.Status(http.StatusCreated).JSON(helpers.SuccessResponse{
-		Data: seller,
+		Data: sellerRes,
 	})
 }
 
-func (s *sellerController) Login(c *fiber.Ctx) error {
+func (sctr *sellerController) Login(c *fiber.Ctx) error {
 	loginReq := new(entity.SellerDTOLogin)
 	if err := c.BodyParser(loginReq); err != nil {
 		rErr := resterrors.NewRestError("unprocessable entity", http.StatusUnprocessableEntity, err.Error())
+		return c.Status(rErr.Status()).JSON(rErr.ErrorResponse())
+	}
+
+	// validate request
+	vErr := sctr.validate.Struct(loginReq)
+	if vErr != nil {
+		message, _ := helpers.CreateValidationMessage(vErr)
+		rErr := resterrors.NewBadRequestError(message)
 		return c.Status(rErr.Status()).JSON(rErr.ErrorResponse())
 	}
 
@@ -59,9 +84,9 @@ func (s *sellerController) Login(c *fiber.Ctx) error {
 		Email:    loginReq.Email,
 		Password: loginReq.Password,
 	}
-	seller, err := s.sellerUseCase.Login(&seller)
+	seller, err := sctr.sellerUseCase.Login(&seller)
 	if err != nil {
-		return c.Status(err.Status()).JSON(err.Error())
+		return c.Status(err.Status()).JSON(err.ErrorResponse())
 	}
 
 	// create jwt token

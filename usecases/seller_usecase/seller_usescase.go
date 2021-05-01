@@ -1,6 +1,8 @@
 package sellerusecase
 
 import (
+	"fmt"
+
 	"github.com/hieronimusbudi/komodo-backend/entity"
 	resterrors "github.com/hieronimusbudi/komodo-backend/framework/helpers/rest_errors"
 	"golang.org/x/crypto/bcrypt"
@@ -17,16 +19,28 @@ func NewSellerUsecase(sellerRepo entity.SellerRepository) entity.SellerUseCase {
 	}
 }
 
-func (s *sellerUsecase) Register(buyer *entity.Seller) resterrors.RestErr {
-	// encrypt password
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(buyer.Password), bcrypt.DefaultCost)
+func (s *sellerUsecase) Register(seller *entity.Seller) resterrors.RestErr {
+	// check existing user
+	ss := new(entity.Seller)
+	ss.Email = seller.Email
+	repoRes, err := s.sellerRepo.GetByEmail(ss)
 	if err != nil {
-		return resterrors.NewInternalServerError(err.Error(), err)
+		if err.Causes() != "sql: no rows in result set" {
+			return err
+		}
+	} else if repoRes.Email == seller.Email {
+		return resterrors.NewBadRequestError(fmt.Sprintf("user with email %s is already exist", repoRes.Email))
 	}
 
-	buyer.Password = string(hashedPassword)
+	// encrypt password
+	hashedPassword, bErr := bcrypt.GenerateFromPassword([]byte(seller.Password), bcrypt.DefaultCost)
+	if bErr != nil {
+		return resterrors.NewInternalServerError(bErr.Error(), bErr)
+	}
 
-	repoErr := s.sellerRepo.Store(buyer)
+	seller.Password = string(hashedPassword)
+
+	repoErr := s.sellerRepo.Store(seller)
 	if repoErr != nil {
 		return repoErr
 	}

@@ -15,7 +15,7 @@ func buyerRoutes(app *fiber.App, d *dependencies.Dependencies) {
 	// inject repository to usecase
 	u := buyerusecase.NewBuyerUsecase(r)
 	// inject usecase to controller
-	c := buyercontroller.NewBuyerController(u)
+	c := buyercontroller.NewBuyerController(u, d.Validate)
 
 	app.Post("/buyers/register", c.Register)
 	app.Post("/buyers/login", c.Login)

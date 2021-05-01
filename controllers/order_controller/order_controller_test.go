@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	ordercontroller "github.com/hieronimusbudi/komodo-backend/controllers/order_controller"
 	"github.com/hieronimusbudi/komodo-backend/entity"
@@ -31,12 +32,14 @@ type TestSuite struct {
 	mockSeller                entity.Seller
 	mockProduct               entity.Product
 	app                       *fiber.App
+	validate                  *validator.Validate
 }
 
 // for each test
 func (suite *TestSuite) SetupTest() {
 	suite.mockOrderUCase = new(mocks.OrderUseCase)
 	suite.app = fiber.New()
+	suite.validate = validator.New()
 
 	suite.mockBuyer = entity.Buyer{
 		Email:          "buyer1@mail.com",
@@ -92,8 +95,6 @@ func (suite *TestSuite) SetupTest() {
 		SellerID:                   suite.mockSeller.ID,
 		DeliverySourceAddress:      "pickup address",
 		DeliveryDestinationAddress: "sending address",
-		TotalQuantity:              10,
-		TotalPrice:                 181818.11,
 		Items: []entity.OrderDetailDTORequest{
 			suite.mockOrderDetailDTORequest,
 		},
@@ -116,10 +117,36 @@ func (suite *TestSuite) TestStore() {
 	ctx.Request().SetBody(j)
 	defer suite.app.ReleaseCtx(ctx)
 
-	handler := ordercontroller.NewOrderController(suite.mockOrderUCase)
+	handler := ordercontroller.NewOrderController(suite.mockOrderUCase, suite.validate)
 
 	hErr := handler.Store(ctx)
 	suite.NoError(hErr)
+}
+
+func (suite *TestSuite) TestStoreError() {
+	suite.mockOrderDTOReq.BuyerID = 0
+	suite.mockOrderDTOReq.SellerID = 0
+
+	j, err := json.Marshal(suite.mockOrderDTOReq)
+	suite.NoError(err)
+
+	handler := ordercontroller.NewOrderController(suite.mockOrderUCase, suite.validate)
+	suite.app.Post("/orders",
+		func(c *fiber.Ctx) error {
+			c.Request().Header.SetContentType(fiber.MIMEApplicationJSON)
+			return c.Next()
+		},
+		handler.Store,
+	)
+
+	resp, err := suite.app.Test(
+		httptest.NewRequest(
+			http.MethodPost,
+			"http://example.com/orders",
+			strings.NewReader(string(j)),
+		))
+	suite.NoError(err)
+	suite.Equal(http.StatusBadRequest, resp.StatusCode)
 }
 
 func (suite *TestSuite) TestGetByUserID() {
@@ -130,7 +157,7 @@ func (suite *TestSuite) TestGetByUserID() {
 	ctx.Request().Header.SetContentType(fiber.MIMEApplicationJSON)
 	defer suite.app.ReleaseCtx(ctx)
 
-	handler := ordercontroller.NewOrderController(suite.mockOrderUCase)
+	handler := ordercontroller.NewOrderController(suite.mockOrderUCase, suite.validate)
 
 	hErr := handler.GetByUserID(ctx)
 	suite.NoError(hErr)
@@ -142,7 +169,7 @@ func (suite *TestSuite) TestAcceptOrder() {
 	j, err := json.Marshal(suite.mockOrderDTOReq)
 	suite.NoError(err)
 
-	handler := ordercontroller.NewOrderController(suite.mockOrderUCase)
+	handler := ordercontroller.NewOrderController(suite.mockOrderUCase, suite.validate)
 	suite.app.Put("/orders/:id/accept", func(c *fiber.Ctx) error {
 		hErr := handler.AcceptOrder(c)
 		suite.NoError(hErr)

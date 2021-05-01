@@ -19,10 +19,6 @@ type BuyerDTORequest struct {
 	SendingAddress string `json:"sendingAddress" validate:"gte=0,lte=511"`
 }
 
-func (b BuyerDTORequest) Validate() resterrors.RestErr {
-	return resterrors.NewBadRequestError("NewBadRequestError")
-}
-
 type BuyerDTOLogin struct {
 	Email    string `json:"email" validate:"required,email"`
 	Password string `json:"password" validate:"required"`

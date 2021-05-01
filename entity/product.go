@@ -14,18 +14,18 @@ type Product struct {
 }
 
 type ProductDTORequest struct {
+	Name        string  `json:"name" validate:"required"`
+	Description string  `json:"description" validate:"required,gte=0"`
+	Price       float64 `json:"price" validate:"required"`
+	SellerID    int64   `json:"sellerId" validate:"required"`
+}
+
+type ProductDTOResponse struct {
+	ID          int64   `json:"id"`
 	Name        string  `json:"name"`
 	Description string  `json:"description"`
 	Price       float64 `json:"price"`
 	SellerID    int64   `json:"sellerId"`
-}
-
-type ProductDTOResponse struct {
-	ID          int64             `json:"id"`
-	Name        string            `json:"name"`
-	Description string            `json:"description"`
-	Price       float64           `json:"price"`
-	Seller      SellerDTOResponse `json:"seller"`
 }
 
 type ProductUseCase interface {
@@ -35,7 +35,7 @@ type ProductUseCase interface {
 
 type ProductRepository interface {
 	GetAll() ([]Product, resterrors.RestErr)
-	GetByID(product *Product) resterrors.RestErr
+	GetByID(product *Product) (Product, resterrors.RestErr)
 	Update(product *Product) resterrors.RestErr
 	Store(product *Product) resterrors.RestErr
 	Delete(product *Product) resterrors.RestErr

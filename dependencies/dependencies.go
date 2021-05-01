@@ -12,7 +12,11 @@ type Dependencies struct {
 	Validate *validator.Validate
 }
 
-func (d *Dependencies) Init() {
-	d.Conn = mysqlpersistence.Client
-	d.Validate = validator.New()
+func NewDependencies() *Dependencies {
+	conn := mysqlpersistence.Client
+	validate := validator.New()
+	return &Dependencies{
+		Conn:     conn,
+		Validate: validate,
+	}
 }

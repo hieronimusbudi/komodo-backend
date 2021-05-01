@@ -14,6 +14,7 @@ import (
 
 func TestStore(t *testing.T) {
 	mockOrderRepo := new(mocks.OrderRepository)
+	mockProductRepo := new(mocks.ProductRepository)
 
 	mockBuyer1 := entity.Buyer{
 		ID:             1,
@@ -64,9 +65,10 @@ func TestStore(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		tmpMockOrder := mockOrder1
+		mockProductRepo.On("GetByID", mock.AnythingOfType("*entity.Product")).Return(mockProduct1, nil)
 		mockOrderRepo.On("Store", mock.AnythingOfType("*entity.Order")).Return(nil).Once()
 
-		u := orderusecase.NewOrderUsecase(mockOrderRepo)
+		u := orderusecase.NewOrderUsecase(mockOrderRepo, mockProductRepo)
 		err := u.Store(&tmpMockOrder)
 
 		assert.NoError(t, err)
@@ -77,6 +79,7 @@ func TestStore(t *testing.T) {
 
 func TestByUserID(t *testing.T) {
 	mockOrderRepo := new(mocks.OrderRepository)
+	mockProductRepo := new(mocks.ProductRepository)
 
 	mockBuyer1 := entity.Buyer{
 		ID:             1,
@@ -159,8 +162,9 @@ func TestByUserID(t *testing.T) {
 	t.Run("success get order by buyer", func(t *testing.T) {
 		mockOrdersForBuyer := []entity.Order{mockOrderForBuyer}
 		mockOrderRepo.On("GetByBuyerID", mock.AnythingOfType("int64")).Return(mockOrdersForBuyer, nil).Once()
+		mockProductRepo.On("GetByID", mock.AnythingOfType("*entity.Product")).Return(mockProduct1, nil)
 
-		u := orderusecase.NewOrderUsecase(mockOrderRepo)
+		u := orderusecase.NewOrderUsecase(mockOrderRepo, mockProductRepo)
 		uRes, err := u.GetByUserID(mockBuyer1.ID, helpers.BUYER_TYPE)
 
 		assert.NoError(t, err)
@@ -171,8 +175,9 @@ func TestByUserID(t *testing.T) {
 	t.Run("success get order by seller", func(t *testing.T) {
 		mockOrdersForSeller := []entity.Order{mockOrderForSeller}
 		mockOrderRepo.On("GetBySellerID", mock.AnythingOfType("int64")).Return(mockOrdersForSeller, nil).Once()
+		mockProductRepo.On("GetByID", mock.AnythingOfType("*entity.Product")).Return(mockProduct1, nil)
 
-		u := orderusecase.NewOrderUsecase(mockOrderRepo)
+		u := orderusecase.NewOrderUsecase(mockOrderRepo, mockProductRepo)
 		uRes, err := u.GetByUserID(mockSeller2.ID, helpers.SELLER_TYPE)
 
 		assert.NoError(t, err)
@@ -183,6 +188,7 @@ func TestByUserID(t *testing.T) {
 
 func TestAcceptOrder(t *testing.T) {
 	mockOrderRepo := new(mocks.OrderRepository)
+	mockProductRepo := new(mocks.ProductRepository)
 
 	mockBuyer1 := entity.Buyer{
 		ID:             1,
@@ -236,7 +242,7 @@ func TestAcceptOrder(t *testing.T) {
 		mockOrderRepo.On("GetByID", mock.AnythingOfType("*entity.Order")).Return(mockOrder1, nil).Once()
 		mockOrderRepo.On("Update", mock.AnythingOfType("*entity.Order")).Return(nil).Once()
 
-		u := orderusecase.NewOrderUsecase(mockOrderRepo)
+		u := orderusecase.NewOrderUsecase(mockOrderRepo, mockProductRepo)
 		uRes, err := u.AcceptOrder(&tmpMockOrder)
 
 		assert.NoError(t, err)

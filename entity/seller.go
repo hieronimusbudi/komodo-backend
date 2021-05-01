@@ -11,10 +11,15 @@ type Seller struct {
 }
 
 type SellerDTORequest struct {
-	Email         string `json:"email"`
-	Name          string `json:"name"`
-	Password      string `json:"password"`
-	PickUpAddress string `json:"pickupAddress"`
+	Email         string `json:"email" validate:"required,email"`
+	Name          string `json:"name" validate:"required"`
+	Password      string `json:"password" validate:"required"`
+	PickUpAddress string `json:"pickupAddress" validate:"gte=0,lte=511"`
+}
+
+type SellerDTOLogin struct {
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required"`
 }
 
 type SellerDTOResponse struct {
@@ -22,11 +27,6 @@ type SellerDTOResponse struct {
 	Email         string `json:"email"`
 	Name          string `json:"name"`
 	PickUpAddress string `json:"pickupAddress"`
-}
-
-type SellerDTOLogin struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
 }
 
 type SellerUseCase interface {

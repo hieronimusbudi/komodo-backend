@@ -99,7 +99,7 @@ func (suite *TestSuite) TestGetByID() {
 	product := new(entity.Product)
 	product.ID = suite.expectedProduct1.ID
 
-	repoErr := suite.repo.GetByID(product)
+	_, repoErr := suite.repo.GetByID(product)
 	suite.NoError(repoErr)
 	suite.NotNil(product)
 }

@@ -56,19 +56,26 @@ func (_m *ProductRepository) GetAll() ([]entity.Product, resterrors.RestErr) {
 }
 
 // GetByID provides a mock function with given fields: product
-func (_m *ProductRepository) GetByID(product *entity.Product) resterrors.RestErr {
+func (_m *ProductRepository) GetByID(product *entity.Product) (entity.Product, resterrors.RestErr) {
 	ret := _m.Called(product)
 
-	var r0 resterrors.RestErr
-	if rf, ok := ret.Get(0).(func(*entity.Product) resterrors.RestErr); ok {
+	var r0 entity.Product
+	if rf, ok := ret.Get(0).(func(*entity.Product) entity.Product); ok {
 		r0 = rf(product)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(resterrors.RestErr)
+		r0 = ret.Get(0).(entity.Product)
+	}
+
+	var r1 resterrors.RestErr
+	if rf, ok := ret.Get(1).(func(*entity.Product) resterrors.RestErr); ok {
+		r1 = rf(product)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(resterrors.RestErr)
 		}
 	}
 
-	return r0
+	return r0, r1
 }
 
 // Store provides a mock function with given fields: product
