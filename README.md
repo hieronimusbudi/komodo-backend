@@ -87,11 +87,12 @@ docker-compose up --build
 | 2   | /buyers/login       | POST   | no          | all       |
 | 3   | /sellers/register   | POST   | no          | all       |
 | 4   | /sellers/login      | POST   | no          | all       |
-| 5   | /products           | GET    | no          | all       |
+| 5   | /products           | GET    | yes         | all       |
 | 6   | /products           | POST   | yes         | seller    |
 | 7   | /orders/find/byuser | POST   | yes         | all       |
 | 8   | /orders             | POST   | yes         | buyer     |
 | 9   | /orders/:id/accept  | PUT    | yes         | seller    |
 
 ## Database Design
+
 ![db_design](https://user-images.githubusercontent.com/28037175/116769487-b67d8e80-aa66-11eb-8820-cfac90be9eeb.png)
