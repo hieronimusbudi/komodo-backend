@@ -12,7 +12,7 @@ Golang Ecommerce API using MySQL DB and Fiber
 go get ./...
 ```
 
-2. Add Config at `.env` file in root folder.
+2. Add Config at `.env` file at root folder.
 
 ```golang
 PORT = 9000
