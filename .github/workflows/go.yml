@@ -23,8 +23,3 @@ jobs:
 
     - name: Test
       run: go test -v ./...
-      
-    - name: Publish to coveralls.io
-      uses: coverallsapp/github-action@v1.1.2
-      with:
-        github-token: QXr1f0Ub5PvDuyg2YqZ9euDkbKzSMXCgW
