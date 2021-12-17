@@ -18,5 +18,20 @@ func buyerRoutes(app *fiber.App, d *dependencies.Dependencies) {
 	c := buyercontroller.NewBuyerController(u, d.Validate)
 
 	app.Post("/buyers/register", c.Register)
+
+	// swagger:operation POST /auth/login login loginRequest
+	// ---
+	// summary: Login.
+	// description: Login using API key and Password.
+	// parameters:
+	// - in: body
+	//   name: body
+	//   description: Login body request
+	//   required: true
+	//   schema:
+	//     $ref: "#/definitions/loginRequest"
+	// responses:
+	//   "200":
+	//     "$ref": "#/definitions/loginRequest"
 	app.Post("/buyers/login", c.Login)
 }

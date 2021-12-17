@@ -19,8 +19,19 @@ type BuyerDTORequest struct {
 	SendingAddress string `json:"sendingAddress" validate:"gte=0,lte=511"`
 }
 
+// LoginRequest represents login request
+//
+// swagger:model loginRequest
 type BuyerDTOLogin struct {
-	Email    string `json:"email" validate:"required,email"`
+	// api key as user identification
+	//
+	// example: a639d2829e9e11eb9ed1bf478603cc01
+	// required: true
+	Email string `json:"email" validate:"required,email"`
+	// api key as user identification
+	//
+	// example: a639d2829e9e11eb9ed1bf478603cc01
+	// required: true
 	Password string `json:"password" validate:"required"`
 }
 
