@@ -1,5 +1,7 @@
 # Komodo REST API
 
+[![Coverage Status](https://coveralls.io/repos/github/hieronimusbudi/komodo-backend/badge.svg?branch=main)](https://coveralls.io/github/hieronimusbudi/komodo-backend?branch=main)
+
 Golang Ecommerce API using MySQL DB and Fiber
 
 ## How to install
@@ -12,7 +14,7 @@ Golang Ecommerce API using MySQL DB and Fiber
 go get ./...
 ```
 
-2. Add Config at `.env` file in root folder.
+2. Add Config at `.env` file at root folder.
 
 ```golang
 PORT = 9000
@@ -76,7 +78,7 @@ docker-compose up --build
 | 5   | /products           | GET    |                                                                                                                                                                                                                                                                                                                             | Get all products                                   |
 | 6   | /products           | POST   | <pre lang="json">{<br> "name":"pro1",<br> "description":"check",<br> "price":91051551.13,<br> "sellerId":1<br>}</pre>                                                                                                                                                                                                       | Create a product                                   |
 | 7   | /orders/find/byuser | GET    |                                                                                                                                                                                                                                                                                                                             | Get all orders by buyer/seller id inside JWT token |
-| 8   | /orders             | POST   | <pre lang="json">{<br>"buyerId": 6,<br>"sellerId": 3,<br>"deliverySourceAddress": "source",<br>"deliveryDestinationAddress": "destination",<br>"items": [<br>{<br>"productId": 1,<br>"quantity": 12<br>},<br>{<br>"productId": 2,<br>"quantity": 8<br>},<br>{<br>"productId": 3,<br>"quantity": 10<br>}<br>]<br><br>}</pre> | Create a order                                     |
+| 8   | /orders             | POST   | <pre lang="json">{<br>"buyerId": 1,<br>"sellerId": 1,<br>"deliverySourceAddress": "source",<br>"deliveryDestinationAddress": "destination",<br>"items": [<br>{<br>"productId": 1,<br>"quantity": 12<br>},<br>{<br>"productId": 2,<br>"quantity": 8<br>},<br>{<br>"productId": 3,<br>"quantity": 10<br>}<br>]<br><br>}</pre> | Create an order                                     |
 | 9   | /orders/:id/accept  | PUT    |                                                                                                                                                                                                                                                                                                                             | Accept order                                       |
 
 ## Endpoints security
