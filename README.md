@@ -1,5 +1,7 @@
 # Komodo REST API
 
+[![Coverage Status](https://coveralls.io/repos/github/hieronimusbudi/komodo-backend/badge.svg?branch=main)](https://coveralls.io/github/hieronimusbudi/komodo-backend?branch=main)
+
 Golang Ecommerce API using MySQL DB and Fiber
 
 ## How to install
